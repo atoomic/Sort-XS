@@ -1,0 +1,10 @@
+Sort-XS-*
+*.o
+XS.c
+XS.bs
+pm_to_blib
+MYMETA*
+Makefile
+blib
+Makefile.old
+MANIFEST.bak
