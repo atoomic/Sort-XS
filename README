@@ -192,6 +192,10 @@ BENCHMARK
     # sorting an ( integer ) array of 1_000_000 rows - quicksort is 3.4 x
     times faster than a regular perl sort
 
+CONTRIBUTE
+    You can contribute to this project via GitHub :
+    https://github.com/atoomic/Sort-XS
+
 TODO
     Implementation of float, string comparison... At this time only
     implement sort of integers
