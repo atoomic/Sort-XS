@@ -1,10 +1,9 @@
 #!/usr/bin/env perl
 
 BEGIN {
-    unless ( $ENV{RELEASE_TESTING} ) {
+    unless ( $ENV{DEVEL_TESTS} ) {
         require Test::More;
-        Test::More::plan( skip_all =>
-'these tests are for release candidate testing ( set RELEASE_TESTING=1 )'
+        Test::More::plan( skip_all => 'Enable DEVEL_TESTS environment variable'
         );
     }
 }
