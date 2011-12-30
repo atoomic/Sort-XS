@@ -3,21 +3,46 @@
 BEGIN {
     unless ( $ENV{DEVEL_TESTS} ) {
         require Test::More;
-        Test::More::plan( skip_all => 'Enable DEVEL_TESTS environment variable'
-        );
+        Test::More::plan(
+            skip_all => 'Enable DEVEL_TESTS environment variable' );
+    }
+    my @needs = (
+        'Test::More',
+        'Data::Dumper qw/Dumper/',
+        'List::Util qw(shuffle)',
+        'Sort::Key qw(keysort nkeysort ikeysort)',
+        'IPC::System::Simple qw/capture/',
+        'Benchmark qw/timethese cmpthese/'
+    );
+
+    foreach (@needs) {
+        eval "use $_";
+        plan( skip_all => "$_ required for updating README" )
+          if $@;
     }
 }
 
 use strict;
 use warnings;
 use v5.10;
-
-use Benchmark qw/timethese cmpthese/;
-use Test::More;
 use Sort::XS;
-use List::Util qw(shuffle);
 
-use Data::Dumper qw/Dumper/;
+# check internal perl sort
+is_deeply( perl_sort( [ 5, 4, 3, 2, 1 ] ), [ 1 .. 5 ], 'sort int with perl' );
+is_deeply(
+    perl_sort_str( [ 'kiwi', 'apple', 'pear', 'cherry' ] ),
+    [ 'apple', 'cherry', 'kiwi', 'pear' ],
+    'sort int with perl'
+);
+
+# check key::sort
+is_deeply( key_sort_int( [ 5, 4, 3, 2, 1 ] ),
+    perl_sort( [ 4, 2, 5, 3, 1 ] ), 'ikeysort' );
+is_deeply(
+    key_sort_str( [ 'kiwi', 'apple', 'pear', 'cherry' ] ),
+    perl_sort_str( [ 'kiwi', 'apple', 'pear', 'cherry' ] ),
+    'keysort str'
+);
 
 my @sets = (
 
@@ -38,25 +63,31 @@ foreach my $set (@sets) {
 
     # generate set of arrays to test
     my @tests;
+    my @tests_str;
     my $arrays = $set->{arrays} || 1;
     my @rows = @{ $set->{rows} };
 
-    for ( 1 .. $arrays ) {
+    say "### benchmark with $arrays arrays of ", join( ', ', @rows ), " rows";
+    my $first = 0;
+    for my $id ( 1 .. $arrays ) {
         for my $nelt (@rows) {
             push @tests, generate_sample($nelt);
+            if ( $id == 1 ) {
+                push @tests_str, generate_str_sample($nelt);
+                $first = $id;
+            }
+            else {
+                my @a = shuffle @{ $tests_str[ $first - 1 ] };
+                push @tests_str, \@a;
+            }
         }
     }
 
     # benchmark the tests
-    my $results = benchmark_set( \@tests );
+    benchmark_integers( \@tests );
 
-    # display results
-    say "### bench $arrays arrays of ", join( ', ', @rows ), " rows";
-    map {
-        my @a = @{$_};
-        say sprintf( "%s -> %0s req/sec", $a[0], $a[1] );
-    } @{ cmpthese($results) };
-    say "\n";
+    # str
+    benchmark_str( \@tests_str );
 }
 
 ok(1);
@@ -71,6 +102,28 @@ sub perl_sort {
 
     my @sorted = sort { $a <=> $b } @$array;
 
+    return \@sorted;
+}
+
+sub perl_sort_str {
+    my $array = shift;
+
+    my @sorted = sort { $a cmp $b } @$array;
+
+    return \@sorted;
+}
+
+sub key_sort_int {
+    my $array = shift;
+
+    my @sorted = ikeysort { $_ } @$array;
+    return \@sorted;
+}
+
+sub key_sort_str {
+    my $array = shift;
+
+    my @sorted = keysort { $_ } @$array;
     return \@sorted;
 }
 
@@ -90,68 +143,171 @@ sub generate_sample {
     return \@reply;
 }
 
-sub benchmark_set {
+sub generate_str_sample {
+    my $max = shift || 10;
+    my @reply;
+
+    say "- generate an array of $max max lines";
+
+    my $cmd = 'find';
+    my @output =
+      capture( join( ' ', $cmd, '/', '2>&1', '|', 'head', '-n', $max ) );
+    foreach my $line (@output) {
+        chomp $line;
+        my @array = split( '/', $line );
+        my $elt = $array[-1];
+        next unless defined $elt;
+        push @reply, $elt;
+    }
+    @reply = shuffle @reply;
+    return \@reply;
+}
+
+sub benchmark_integers {
     my ($set) = @_;
     my @tests = @$set;
 
     my $count = -2;
-    return timethese(
-        $count,
-        {
-### correct on memory
-            #        'insertion' => sub {
-            #            foreach my $t (@tests) {
-            #                my @sorted = Sort::XS::insertion_sort($t);
-            #            }
-            #        },
+    $count = -5 if ( scalar @{ $tests[0] } >= 100_000 );
 
-            'merge' => sub {
-                foreach my $t (@tests) {
-                    my $sorted = Sort::XS::merge_sort($t);
-                }
-            },
+    cmpthese(
+        timethese(
+            $count,
+            {
 
-            'quick' => sub {
-                foreach my $t (@tests) {
-                    my $sorted = Sort::XS::quick_sort($t);
-                }
-            },
-            'api_quick' => sub {
-                foreach my $t (@tests) {
-                    my $sorted = xsort($t);
-                }
-            },
-            'api_hash_quick' => sub {
-                foreach my $t (@tests) {
-                    my $sorted = xsort(
-                        list      => $t,
-                        algorithm => 'quick',
-                        data      => 'integer'
-                    );
-                }
-            },
+                '[int] XS merge' => sub {
+                    foreach my $t (@tests) {
+                        my $sorted = Sort::XS::merge_sort($t);
+                    }
+                },
 
-            'void' => sub {
-                foreach my $t (@tests) {
-                    my $sorted = Sort::XS::void_sort($t);
-                }
-            },
+                '[int] XS quick' => sub {
+                    foreach my $t (@tests) {
+                        my $sorted = Sort::XS::quick_sort($t);
+                    }
+                },
+                '[int] API quick' => sub {
+                    foreach my $t (@tests) {
+                        my $sorted = xsort($t);
+                    }
+                },
+                '[int] API quick with hash' => sub {
+                    foreach my $t (@tests) {
+                        my $sorted = xsort(
+                            list      => $t,
+                            algorithm => 'quick',
+                            type      => 'integer'
+                        );
+                    }
+                },
 
-            'heap' => sub {
-                foreach my $t (@tests) {
-                    my $sorted = Sort::XS::heap_sort($t);
-                }
-            },
+                'void' => sub {
+                    foreach my $t (@tests) {
+                        my $sorted = Sort::XS::void_sort($t);
+                    }
+                },
 
-            'perl' => sub {
-                foreach my $t (@tests) {
-                    my $sorted = perl_sort($t);
+                '[int] heap' => sub {
+                    foreach my $t (@tests) {
+                        my $sorted = Sort::XS::heap_sort($t);
+                    }
+                },
 
-                }
-            },
-        }
+                '[int] Perl' => sub {
+                    foreach my $t (@tests) {
+                        my $sorted = perl_sort($t);
+
+                    }
+                },
+                '[int] API Perl' => sub {
+                    foreach my $t (@tests) {
+                        my $sorted = xsort( $t, algorithm => 'perl' );
+                    }
+                },
+                '[int] ikeysort' => sub {
+                    foreach my $t (@tests) {
+                        my $sorted = key_sort_int($t);
+
+                    }
+                },
+
+            }
+        )
     );
+    say "\n";
+}
 
+sub benchmark_str {
+    my ($set) = @_;
+    my @tests = @$set;
+
+    my $count = -2;
+    $count = -5 if ( scalar @{ $tests[0] } >= 100_000 );
+
+    cmpthese(
+        timethese(
+            $count,
+            {
+
+                '[str] XS merge' => sub {
+                    foreach my $t (@tests) {
+                        my $sorted = Sort::XS::merge_sort_str($t);
+                    }
+                },
+
+                '[str] XS quick' => sub {
+                    foreach my $t (@tests) {
+                        my $sorted = Sort::XS::quick_sort_str($t);
+                    }
+                },
+
+                '[str] API sxsort' => sub {
+                    foreach my $t (@tests) {
+                        my $sorted = sxsort($t);
+                    }
+                },
+
+                #                         '[str] API xsort' => sub {
+                #                             foreach my $t (@tests) {
+                #                                 my $sorted = xsort(
+                #                                     list      => $t,
+                #                                     algorithm => 'quick',
+                #                                     type      => 'string'
+                #                                 );
+                #                             }
+                #                         },
+
+                '[str] XS heap' => sub {
+                    foreach my $t (@tests) {
+                        my $sorted = Sort::XS::heap_sort_str($t);
+                    }
+                },
+
+                '[str] Perl' => sub {
+                    foreach my $t (@tests) {
+                        my $sorted = perl_sort_str($t);
+
+                    }
+                },
+                '[str] keysort' => sub {
+                    foreach my $t (@tests) {
+                        my $sorted = key_sort_str($t);
+
+                    }
+                },
+
+                # cannot do this at this time ( confusion of perl )
+
+#                         '[str] API Perl' => sub {
+#                             foreach my $t (@tests) {
+#                                 my $sorted = xsort( $t, algorithm => 'perl' );
+#                             }
+#                         },
+
+            }
+        )
+    );
+    say "\n";
 }
 
 __END__

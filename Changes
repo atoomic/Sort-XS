@@ -1,0 +1,8 @@
+NEXT
+    - sort integers or string
+    - provide api for xsort, ixsort and sxsort
+    - improve benchmarks
+    - update pod
+
+0.1 alpha release, only sort integers
+
