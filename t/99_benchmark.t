@@ -10,7 +10,7 @@ BEGIN {
         'Test::More',
         'Data::Dumper qw/Dumper/',
         'List::Util qw(shuffle)',
-        'Sort::Key qw(keysort nkeysort ikeysort)',
+        'Sort::Key qw(isort)',
         'IPC::System::Simple qw/capture/',
         'Benchmark qw/timethese cmpthese/'
     );
@@ -26,23 +26,6 @@ use strict;
 use warnings;
 use v5.10;
 use Sort::XS;
-
-# check internal perl sort
-is_deeply( perl_sort( [ 5, 4, 3, 2, 1 ] ), [ 1 .. 5 ], 'sort int with perl' );
-is_deeply(
-    perl_sort_str( [ 'kiwi', 'apple', 'pear', 'cherry' ] ),
-    [ 'apple', 'cherry', 'kiwi', 'pear' ],
-    'sort int with perl'
-);
-
-# check key::sort
-is_deeply( key_sort_int( [ 5, 4, 3, 2, 1 ] ),
-    perl_sort( [ 4, 2, 5, 3, 1 ] ), 'ikeysort' );
-is_deeply(
-    key_sort_str( [ 'kiwi', 'apple', 'pear', 'cherry' ] ),
-    perl_sort_str( [ 'kiwi', 'apple', 'pear', 'cherry' ] ),
-    'keysort str'
-);
 
 my @sets = (
 
@@ -96,36 +79,6 @@ done_testing;
 exit;
 
 # helpers
-
-sub perl_sort {
-    my $array = shift;
-
-    my @sorted = sort { $a <=> $b } @$array;
-
-    return \@sorted;
-}
-
-sub perl_sort_str {
-    my $array = shift;
-
-    my @sorted = sort { $a cmp $b } @$array;
-
-    return \@sorted;
-}
-
-sub key_sort_int {
-    my $array = shift;
-
-    my @sorted = ikeysort { $_ } @$array;
-    return \@sorted;
-}
-
-sub key_sort_str {
-    my $array = shift;
-
-    my @sorted = keysort { $_ } @$array;
-    return \@sorted;
-}
 
 sub generate_sample {
     my ($elt) = shift;
@@ -215,7 +168,7 @@ sub benchmark_integers {
 
                 '[int] Perl' => sub {
                     foreach my $t (@tests) {
-                        my $sorted = perl_sort($t);
+                        my $sorted = [sort { $a <=> $b } @$t];
 
                     }
                 },
@@ -224,13 +177,12 @@ sub benchmark_integers {
                         my $sorted = xsort( $t, algorithm => 'perl' );
                     }
                 },
-                '[int] ikeysort' => sub {
+                '[int] isort' => sub {
                     foreach my $t (@tests) {
-                        my $sorted = key_sort_int($t);
+                        my $sorted = [isort @$t];
 
                     }
                 },
-
             }
         )
     );
@@ -285,14 +237,7 @@ sub benchmark_str {
 
                 '[str] Perl' => sub {
                     foreach my $t (@tests) {
-                        my $sorted = perl_sort_str($t);
-
-                    }
-                },
-                '[str] keysort' => sub {
-                    foreach my $t (@tests) {
-                        my $sorted = key_sort_str($t);
-
+                        my $sorted = [sort @$t];
                     }
                 },
 
