@@ -1,10 +1,14 @@
 #include <stdlib.h>
 #include <string.h>
+
+#include "EXTERN.h"
+#include "perl.h"
+
 #include "sort.h"
 
 /* basic comparison operators */
 int compare_int(const ElementType *a, const ElementType *b) {
-	return a->i - b->i;
+        return (a->i < b->i ? -1 : (a->i > b->i ? 1 : 0));
 }
 
 int compare_str(const ElementType *a, const ElementType *b) {

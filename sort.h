@@ -4,7 +4,7 @@
 /* typedef used */
 typedef union {
 	double f;
-	int    i;
+        IV     i;
 	char  *s;
 } ElementType;
 
