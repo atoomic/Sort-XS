@@ -58,10 +58,12 @@ SV* _jump_to_sort(const SortAlgo method, const SortType type, SV* array) {
 	ElementType elements[size+1];
 	int i;
 	for ( i = 0; i <= size; ++i) {
+                SV **svp = av_fetch(input, i, 0);
+                SV *sv = (svp ? *svp : &PL_sv_undef);
 		if ( type == INT ) {
-			elements[i].i = SvIV(*av_fetch(input, i, 0));
+                         elements[i].i = SvIV(sv);
 		} else {
-			elements[i].s = SvPV_nolen(*av_fetch(input, i, 0));
+                         elements[i].s = SvPV_nolen(sv);
 		}
 		/* fprintf(stderr, "number %02d is %d\n", i, elements[i]); */	
 	}
