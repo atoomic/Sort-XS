@@ -11,6 +11,7 @@ BEGIN {
         'Data::Dumper qw/Dumper/',
         'List::Util qw(shuffle)',
         'Sort::Key qw(isort)',
+        'Sort::Key::Radix',
         'IPC::System::Simple qw/capture/',
         'Benchmark qw/timethese cmpthese/'
     );
@@ -181,6 +182,11 @@ sub benchmark_integers {
                     foreach my $t (@tests) {
                         my $sorted = [isort @$t];
 
+                    }
+                },
+                '[int] isort radix' => sub {
+                    foreach my $t (@tests) {
+                        my $sorted = [Sort::Key::Radix::isort @$t];
                     }
                 },
             }
