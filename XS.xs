@@ -41,6 +41,7 @@ SV* _jump_to_sort(const SortAlgo method, const SortType type, SV* array) {
 	AV* input;
 	SV* reply;
 	SV* elt;
+        int utf8 = 0;
 		
 	av = newAV();
 	reply = newRV_noinc((SV *) av);
@@ -57,29 +58,42 @@ SV* _jump_to_sort(const SortAlgo method, const SortType type, SV* array) {
 	int size = av_len(input);
 	ElementType elements[size+1];
 	int i;
+restart:
 	for ( i = 0; i <= size; ++i) {
                 SV **svp = av_fetch(input, i, 0);
                 SV *sv = (svp ? *svp : &PL_sv_undef);
-		if ( type == INT ) {
-                         elements[i].i = SvIV(sv);
-		} else {
-                         elements[i].s = SvPV_nolen(sv);
-		}
+                if (type == INT)
+                        elements[i].i = SvIV(sv);
+                else {
+                        if (utf8)
+                                elements[i].s = SvPVutf8_nolen(sv);
+                        else {
+                                elements[i].s = SvPV_nolen(sv);
+                                if (SvUTF8(sv)) {
+                                        utf8 = 1;
+                                        goto restart;
+                                }
+                        }
+                }
 		/* fprintf(stderr, "number %02d is %d\n", i, elements[i]); */	
 	}
 	
 	/* map to the c method */
 	sort_function_map[method]( elements, size + 1, cmp_functionmap[type]);
+
+        /* preextend the array */
+        av_extend(av, size);
 	
 	/* convert into perl types */
 	for ( i = 0; i <= size; ++i) {
-		if ( type == INT ) {
-			av_push(av, newSViv(elements[i].i));
-		} else {
-			av_push(av, newSVpv(elements[i].s, 0));
-		}
-	}	
-	
+                SV *sv;
+                if (type == INT)
+                        sv = newSViv(elements[i].i);
+                else 
+                        sv = newSVpvn_utf8(elements[i].s, strlen(elements[i].s), utf8);
+                av_store(av, i, sv);
+        }
+
 	return reply;
 }
 
