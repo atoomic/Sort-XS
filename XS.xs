@@ -61,8 +61,7 @@ SV* _jump_to_sort(const SortAlgo method, const SortType type, SV* array) {
 		if ( type == INT ) {
 			elements[i].i = SvIV(*av_fetch(input, i, 0));
 		} else {
-			int len;
-			elements[i].s = SvPV(*av_fetch(input, i, 0), len);
+			elements[i].s = SvPV_nolen(*av_fetch(input, i, 0));
 		}
 		/* fprintf(stderr, "number %02d is %d\n", i, elements[i]); */	
 	}
