@@ -18,7 +18,7 @@ BEGIN {
 
     foreach (@needs) {
         eval "use $_";
-        plan( skip_all => "$_ required for updating README" )
+        plan( skip_all => "$_ required for benchmarks" )
           if $@;
     }
 }
@@ -224,17 +224,6 @@ sub benchmark_str {
                         my $sorted = sxsort($t);
                     }
                 },
-
-                #                         '[str] API xsort' => sub {
-                #                             foreach my $t (@tests) {
-                #                                 my $sorted = xsort(
-                #                                     list      => $t,
-                #                                     algorithm => 'quick',
-                #                                     type      => 'string'
-                #                                 );
-                #                             }
-                #                         },
-
                 '[str] XS heap' => sub {
                     foreach my $t (@tests) {
                         my $sorted = Sort::XS::heap_sort_str($t);
@@ -246,14 +235,6 @@ sub benchmark_str {
                         my $sorted = [sort @$t];
                     }
                 },
-
-                # cannot do this at this time ( confusion of perl )
-
-#                         '[str] API Perl' => sub {
-#                             foreach my $t (@tests) {
-#                                 my $sorted = xsort( $t, algorithm => 'perl' );
-#                             }
-#                         },
 
             }
         )
