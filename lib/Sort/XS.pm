@@ -344,7 +344,8 @@ Here is a short definition for each label used for these benchmarks.
     * API Perl              : use native sort perl method thru API ; xsort(list => $array, algorithm => 'perl');      
     * API quick             : use quicksort via API ; xsort($array);         
     * API quick with hash   : use xsort method with additonnal parameters ; xsort(list => $array, algorithm => 'quick', type => 'integer');
-    * ikeysort              : use ikeysort method from Key::Sort module ; ikeysort { $_ } @$array; 
+    * isort                 : use isort method from Key::Sort module ; 
+    * isort radix           : use isort method from Sort::Key::Radix module ; 
     * XS heap               : direct call to the xs method ; Sort::XS::heap_sort($array);
     * XS merge              : direct call to the xs method ; Sort::XS::merge_sort($array);       
     * XS quick              : direct call to the xs method ; Sort::XS::quick_sort($array);
@@ -366,17 +367,17 @@ Perl and void bench are here as a baseline.
 Small arrays are arrays with around 10 elements.
 benchmark with 1000 arrays of 10 rows
 
-        [ integers ]         Rate       API quick with hash       API Perl       ikeysort    API quick          XS merge       Perl    XS heap       XS quick void
-        API quick with hash 136/s                        --            -4%           -38%            -66%           -73%       -76%       -77%           -77% -81%
-        API Perl            142/s                        5%             --           -35%            -64%           -72%       -75%       -76%           -76% -80%
-        ikeysort            220/s                       62%            55%             --            -44%           -57%       -62%       -62%           -63% -69%
-        API quick           394/s                      190%           177%            79%              --           -22%       -31%       -32%           -33% -44%
-        XS merge            507/s                      273%           256%           130%             28%             --       -12%       -13%           -14% -28%
-        Perl                575/s                      323%           304%           161%             46%            13%         --        -1%            -3% -18%
-        heap                581/s                      328%           309%           164%             47%            15%         1%         --            -2% -17%
-        XS quick            592/s                      336%           316%           169%             50%            17%         3%         2%             -- -16%
-        void                701/s                      416%           393%           219%             78%            38%        22%        21%            18%   --
-
+        [ integers ]         Rate       API quick with hash       API Perl       API quick       XS merge       isort radix       XS quick       heap       isort void       Perl
+        API quick with hash 130/s                        --            -7%            -67%           -74%              -77%           -78%       -78%        -80% -83%       -84%
+        API Perl            140/s                        7%             --            -64%           -72%              -75%           -76%       -76%        -78% -81%       -82%
+        API quick           390/s                      200%           179%              --           -22%              -31%           -33%       -33%        -39% -48%       -51%
+        XS merge            502/s                      287%           260%             29%             --              -11%           -13%       -14%        -21% -33%       -37%
+        isort radix         564/s                      335%           304%             45%            12%                --            -3%        -3%        -11% -25%       -29%
+        XS quick            580/s                      346%           315%             49%            15%                3%             --        -0%         -9% -23%       -27%
+        heap                581/s                      348%           317%             49%            16%                3%             0%         --         -9% -23%       -27%
+        isort               636/s                      390%           356%             63%            27%               13%            10%         9%          -- -15%       -20%
+        void                752/s                      479%           439%             93%            50%               33%            30%        29%         18%   --        -5%
+        Perl                794/s                      512%           469%            104%            58%               41%            37%        37%         25%   6%         --
         
          [ sting ]  Rate       API sxsort       keysort       Perl       XS merge       XS heap       XS quick
         API sxsort 106/s               --           -8%       -59%           -59%          -62%           -63%
@@ -390,16 +391,17 @@ benchmark with 1000 arrays of 10 rows
 
 A mixed of arrays with 10, 100 and 1000 rows. ( 10 arrays of each size, maybe this should match most common usages ? ).
 
-        [ integers ]          Rate       ikeysort       API Perl    Perl XS          merge       heap       API quick with hash       API quick       XS quick void
-        ikeysort             224/s             --           -49%       -53%           -57%       -61%                      -63%            -66%           -67% -85%
-        API Perl             439/s            96%             --        -7%           -16%       -24%                      -27%            -34%           -34% -70%
-        Perl                 475/s           112%             8%         --            -9%       -18%                      -21%            -29%           -29% -68%
-        XS merge             523/s           133%            19%        10%             --       -10%                      -13%            -22%           -22% -65%
-        heap                 580/s           158%            32%        22%            11%         --                       -4%            -13%           -14% -61%
-        API quick with hash  602/s           168%            37%        27%            15%         4%                        --            -10%           -10% -59%
-        API quick            669/s           198%            52%        41%            28%        16%                       11%              --            -0% -55%
-        XS quick             670/s           199%            53%        41%            28%        16%                       11%              0%             -- -55%
-        void                1477/s           558%           236%       211%           182%       155%                      145%            121%           120%   --
+        [ integers ]          Rate       API Perl       Perl       XS merge       isort       heap       API quick with hash       API quick       XS quick       isort radix void
+        API Perl             429/s             --       -13%           -16%        -20%       -24%                      -25%            -33%           -35%              -40% -73%
+        Perl                 493/s            15%         --            -4%         -8%       -12%                      -14%            -23%           -25%              -32% -68%
+        XS merge             511/s            19%         4%             --         -5%        -9%                      -11%            -20%           -22%              -29% -67%
+        isort                536/s            25%         9%             5%          --        -5%                       -7%            -16%           -18%              -26% -66%
+        heap                 562/s            31%        14%            10%          5%         --                       -2%            -12%           -14%              -22% -64%
+        API quick with hash  575/s            34%        17%            13%          7%         2%                        --            -10%           -12%              -20% -63%
+        API quick            638/s            48%        29%            25%         19%        13%                       11%              --            -3%              -12% -59%
+        XS quick             657/s            53%        33%            29%         23%        17%                       14%              3%             --               -9% -58%
+        isort radix          722/s            68%        46%            41%         35%        28%                       25%             13%            10%                -- -54%
+        void                1562/s           264%       217%           206%        191%       178%                      172%            145%           138%              117%   --
         
         [ sting ]    Rate       keysort       API sxsort       Perl       XS heap       XS merge       XS quick
         keysort     770/s            --             -47%       -48%          -57%           -57%           -62%
@@ -409,29 +411,44 @@ A mixed of arrays with 10, 100 and 1000 rows. ( 10 arrays of each size, maybe th
         XS merge   1806/s          135%              25%        22%            1%             --           -10%
         XS quick   2017/s          162%              39%        37%           13%            12%             --
 
+
+Sorting arrays of 100.000 rows
+
+                            Rate         API Perl       Perl       isort       heap       XS merge       XS quick       API quick with hash       API quick       isort radix void
+        API Perl            3.03/s             --        -1%         -6%       -22%           -24%           -42%                      -42%            -43%              -59% -82%
+        Perl                3.07/s             1%         --         -5%       -21%           -23%           -41%                      -41%            -43%              -58% -82%
+        isort               3.21/s             6%         5%          --       -18%           -20%           -38%                      -39%            -40%              -56% -81%
+        heap                3.90/s            29%        27%         21%         --            -2%           -25%                      -25%            -27%              -47% -77%
+        XS merge            4.00/s            32%        30%         24%         2%             --           -23%                      -24%            -25%              -46% -76%
+        XS quick            5.20/s            72%        70%         62%        33%            30%             --                       -1%             -3%              -30% -69%
+        API quick with hash 5.23/s            73%        71%         63%        34%            31%             1%                        --             -2%              -29% -69%
+        API quick           5.36/s            77%        75%         67%        37%            34%             3%                        2%              --              -27% -68%
+        isort radix         7.39/s           144%       141%        130%        89%            85%            42%                       41%             38%                -- -56%
+        void                16.9/s           459%       453%        427%       334%           323%           226%                      224%            216%              129%   --
+
 =head2 Large arrays
 
-A set of 10 random arrays of 100.000 rows.
+Sorting arrays of 1.000.000 rows.
 
-        [ integers ]          Rate       ikeysort       Perl       API Perl       XS merge    XS heap       XS quick       API quick with hash       API quick void
-        ikeysort            1.94/s             --       -35%           -36%           -53%       -56%           -66%                      -66%            -66% -89%
-        Perl                2.99/s            54%         --            -2%           -27%       -32%           -47%                      -47%            -47% -82%
-        API Perl            3.04/s            57%         2%             --           -26%       -30%           -46%                      -46%            -47% -82%
-        XS merge            4.13/s           113%        38%            36%             --        -6%           -27%                      -27%            -27% -76%
-        heap                4.37/s           126%        46%            44%             6%         --           -22%                      -23%            -23% -74%
-        XS quick            5.62/s           190%        88%            85%            36%        28%             --                       -1%             -1% -67%
-        API quick with hash 5.65/s           192%        89%            86%            37%        29%             1%                        --             -1% -66%
-        API quick           5.69/s           193%        90%            87%            38%        30%             1%                        1%              -- -66%
-        void                16.9/s           770%       463%           454%           309%       286%           200%                      198%            197%   --
-        
-        [ sting ]     Rate       keysort       Perl       XS heap       XS merge       XS quick       API sxsort
-        keysort    0.683/s            --       -39%          -54%           -64%           -67%             -67%
-        Perl        1.12/s           64%         --          -25%           -40%           -45%             -46%
-        XS heap     1.49/s          118%        33%            --           -21%           -27%             -28%
-        XS merge    1.88/s          175%        68%           26%             --            -8%              -9%
-        XS quick    2.04/s          199%        82%           37%             9%             --              -1%
-        API sxsort  2.06/s          201%        84%           39%            10%             1%               --
+        [ integers ]          Rate       API Perl       Perl       isort       heap       XS merge       isort radix       XS quick       API quick       API quick with hash void
+        API Perl            1.75/s             --        -0%        -22%       -40%           -48%              -48%           -61%            -61%                      -62% -89%
+        Perl                1.76/s             0%         --        -22%       -40%           -47%              -48%           -61%            -61%                      -62% -89%
+        isort               2.25/s            28%        28%          --       -23%           -33%              -33%           -49%            -50%                      -51% -86%
+        heap                2.94/s            67%        67%         30%         --           -12%              -13%           -34%            -35%                      -36% -82%
+        XS merge            3.35/s            91%        90%         49%        14%             --               -1%           -25%            -25%                      -27% -79%
+        isort radix         3.37/s            92%        92%         50%        15%             1%                --           -24%            -25%                      -26% -79%
+        XS quick            4.46/s           154%       154%         98%        52%            33%               32%             --             -1%                       -3% -73%
+        API quick           4.48/s           156%       155%         99%        53%            34%               33%             1%              --                       -2% -72%
+        API quick with hash 4.57/s           161%       160%        103%        56%            37%               36%             3%              2%                        -- -72%
+        void                16.2/s           826%       824%        621%       453%           385%              382%           264%            262%                      255%   --
 
+       [ sting ]      Rate       Perl       XS heap       XS merge       API sxsort       XS quick
+        Perl       0.698/s         --          -17%           -47%             -52%           -52%
+        XS heap    0.836/s        20%            --           -37%             -43%           -43%
+        XS merge    1.32/s        90%           58%             --             -10%           -10%
+        API sxsort  1.46/s       110%           75%            11%               --            -0%
+        XS quick    1.47/s       110%           76%            11%               0%             --
+  
 
 =head1 CONTRIBUTE
 
@@ -449,6 +466,14 @@ C algorithms can be also tuned.
 =head1 AUTHOR
 
 Nicolas R., E<lt>me@eboxr.comE<gt>
+
+=head1 CONTRIBUTORS
+
+Salvador Fandi–o
+
+=head1 SEE ALSO
+
+Also consider the modules Sort::Key and Sort::Key::Radix, that provide a different API but that can sort faster on many common usage.
 
 =head1 COPYRIGHT AND LICENSE
 
