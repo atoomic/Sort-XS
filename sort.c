@@ -7,11 +7,11 @@
 #include "sort.h"
 
 /* basic comparison operators */
-int compare_int(const ElementType *a, const ElementType *b) {
-        return (a->i < b->i ? -1 : (a->i > b->i ? 1 : 0));
+SORT_INLINE int compare_int(const ElementType *a, const ElementType *b) {
+        return (a->i > b->i) - (a->i < b->i);
 }
 
-int compare_str(const ElementType *a, const ElementType *b) {
+SORT_INLINE int compare_str(const ElementType *a, const ElementType *b) {
 	return strcmp(a->s, b->s);
 }
 
@@ -21,7 +21,7 @@ int compare_str(const ElementType *a, const ElementType *b) {
 */
 
 /* sorting methods */
-void Swap(ElementType *Lhs, ElementType *Rhs) {
+SORT_INLINE void Swap(ElementType *Lhs, ElementType *Rhs) {
 	ElementType Tmp = *Lhs;
 	*Lhs = *Rhs;
 	*Rhs = Tmp;
@@ -40,10 +40,24 @@ void InsertionSort(ElementType A[], int N, CmpFunction *cmp) {
 }
 
 void ShellSort(ElementType A[], int N, CmpFunction *cmp) {
-	int i, j, Increment;
+	int i, j, Increment, gi;
 	ElementType Tmp;
 
-	for (Increment = N / 2; Increment > 0; Increment /= 2)
+	/* Ciura's gap sequence — empirically optimal for modern CPUs.
+	   Extended beyond 701 by multiplying by 2.25 (Ciura's suggested ratio). */
+	static const int ciura_gaps[] = {
+		1, 4, 10, 23, 57, 132, 301, 701,
+		1577, 3548, 7983, 17961, 40412, 90927, 204585, 460316
+	};
+	static const int n_gaps = sizeof(ciura_gaps) / sizeof(ciura_gaps[0]);
+
+	/* Find starting gap */
+	for (gi = n_gaps - 1; gi >= 0; gi--)
+		if (ciura_gaps[gi] < N)
+			break;
+
+	for (; gi >= 0; gi--) {
+		Increment = ciura_gaps[gi];
 		for (i = Increment; i < N; i++) {
 			Tmp = A[i];
 			for (j = i; j >= Increment; j -= Increment)
@@ -53,6 +67,7 @@ void ShellSort(ElementType A[], int N, CmpFunction *cmp) {
 					break;
 			A[j] = Tmp;
 		}
+	}
 }
 
 /* Heap */
@@ -157,13 +172,19 @@ ElementType Median3(ElementType A[], int Left, int Right, CmpFunction *cmp) {
 	return A[Right - 1]; /* Return pivot */
 }
 
-#define Cutoff ( 3 )
+/* Cutoff for switching to insertion sort.
+   16 is well-tuned for modern CPUs: small enough to benefit from
+   O(n^2) on tiny inputs, large enough to reduce recursion overhead
+   and exploit cache-line-sized working sets. */
+#define Cutoff ( 16 )
 
 void Qsort(ElementType A[], int Left, int Right, CmpFunction *cmp) {
 	int i, j;
 	ElementType Pivot;
 
-	if (Left + Cutoff <= Right) {
+	/* Tail-call optimization: loop on the larger partition,
+	   recurse on the smaller one. Guarantees O(log n) stack depth. */
+	while (Left + Cutoff <= Right) {
 		Pivot = Median3(A, Left, Right, cmp);
 		i = Left;
 		j = Right - 1;
@@ -177,12 +198,19 @@ void Qsort(ElementType A[], int Left, int Right, CmpFunction *cmp) {
 		}
 		Swap(&A[i], &A[Right - 1]); /* Restore pivot */
 
-		Qsort(A, Left, i - 1, cmp);
-		Qsort(A, i + 1, Right, cmp);
-	} else
-		/* Do an insertion sort on the subarray */
-		InsertionSort( A + Left, Right - Left + 1, cmp);
+		/* Recurse on smaller partition, loop on larger */
+		if (i - Left < Right - i) {
+			Qsort(A, Left, i - 1, cmp);
+			Left = i + 1;
+		} else {
+			Qsort(A, i + 1, Right, cmp);
+			Right = i - 1;
+		}
+	}
 
+	/* Insertion sort on small remaining subarray */
+	if (Left < Right)
+		InsertionSort(A + Left, Right - Left + 1, cmp);
 }
 
 void QuickSort(ElementType A[], int N, CmpFunction *cmp) {

@@ -1,6 +1,15 @@
 #ifndef _SORT_H
 #define _SORT_H
 
+/* Portable inline hint for internal hot functions */
+#if defined(__GNUC__) || defined(__clang__)
+#define SORT_INLINE inline __attribute__((always_inline))
+#elif defined(_MSC_VER)
+#define SORT_INLINE __forceinline
+#else
+#define SORT_INLINE inline
+#endif
+
 /* typedef used */
 typedef union {
 	double f;
