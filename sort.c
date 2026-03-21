@@ -7,11 +7,11 @@
 #include "sort.h"
 
 /* basic comparison operators */
-int compare_int(const ElementType *a, const ElementType *b) {
-        return (a->i < b->i ? -1 : (a->i > b->i ? 1 : 0));
+SORT_INLINE int compare_int(const ElementType *a, const ElementType *b) {
+        return (a->i > b->i) - (a->i < b->i);
 }
 
-int compare_str(const ElementType *a, const ElementType *b) {
+SORT_INLINE int compare_str(const ElementType *a, const ElementType *b) {
 	return strcmp(a->s, b->s);
 }
 
@@ -21,13 +21,13 @@ int compare_str(const ElementType *a, const ElementType *b) {
 */
 
 /* sorting methods */
-void Swap(ElementType *Lhs, ElementType *Rhs) {
+SORT_INLINE void Swap(ElementType *Lhs, ElementType *Rhs) {
 	ElementType Tmp = *Lhs;
 	*Lhs = *Rhs;
 	*Rhs = Tmp;
 }
 
-void InsertionSort(ElementType A[], int N, CmpFunction *cmp) {
+void SORT_HOT InsertionSort(ElementType A[], int N, CmpFunction *cmp) {
 	int j, P;
 	ElementType Tmp;
 
@@ -39,11 +39,25 @@ void InsertionSort(ElementType A[], int N, CmpFunction *cmp) {
 	}
 }
 
-void ShellSort(ElementType A[], int N, CmpFunction *cmp) {
-	int i, j, Increment;
+void SORT_HOT ShellSort(ElementType A[], int N, CmpFunction *cmp) {
+	int i, j, Increment, gi;
 	ElementType Tmp;
 
-	for (Increment = N / 2; Increment > 0; Increment /= 2)
+	/* Ciura's gap sequence — empirically optimal for modern CPUs.
+	   Extended beyond 701 by multiplying by 2.25 (Ciura's suggested ratio). */
+	static const int ciura_gaps[] = {
+		1, 4, 10, 23, 57, 132, 301, 701,
+		1577, 3548, 7983, 17961, 40412, 90927, 204585, 460316
+	};
+	static const int n_gaps = sizeof(ciura_gaps) / sizeof(ciura_gaps[0]);
+
+	/* Find starting gap */
+	for (gi = n_gaps - 1; gi >= 0; gi--)
+		if (ciura_gaps[gi] < N)
+			break;
+
+	for (; gi >= 0; gi--) {
+		Increment = ciura_gaps[gi];
 		for (i = Increment; i < N; i++) {
 			Tmp = A[i];
 			for (j = i; j >= Increment; j -= Increment)
@@ -53,26 +67,49 @@ void ShellSort(ElementType A[], int N, CmpFunction *cmp) {
 					break;
 			A[j] = Tmp;
 		}
+	}
 }
 
-/* Heap */
+/* Heap — Floyd's bottom-up sift optimization.
+   Standard sift-down does 2 comparisons per level (child vs child, then winner
+   vs parent). Floyd's variant first sifts the hole all the way down (1 cmp/level),
+   then bubbles back up. This cuts comparisons by ~50% for large heaps because
+   most elements end up near the bottom anyway. */
 
 #define LeftChild( i )  ( 2 * ( i ) + 1 )
 
-void PercDown(ElementType A[], int i, int N, CmpFunction *cmp) {
+void SORT_HOT PercDown(ElementType A[], int i, int N, CmpFunction *cmp) {
 	int Child;
-	ElementType Tmp;
+	ElementType Tmp = A[i];
+	int hole = i;
 
-	for (Tmp = A[i]; LeftChild( i ) < N; i = Child) {
-		Child = LeftChild( i );
-		if (Child != N - 1 && (*cmp)(&A[Child + 1], &A[Child]) > 0)
+	/* Phase 1: sift the hole down to a leaf, always following the larger child.
+	   Only 1 comparison per level (child vs child). */
+	while (SORT_LIKELY((Child = LeftChild(hole)) < N - 1)) {
+		/* Prefetch the next level's children for cache warmth */
+		SORT_PREFETCH(&A[LeftChild(Child + 1)]);
+		if ((*cmp)(&A[Child + 1], &A[Child]) > 0)
 			Child++;
-		if ((*cmp)(&A[Child], &Tmp) > 0)
-			A[i] = A[Child];
-		else
+		A[hole] = A[Child];
+		hole = Child;
+	}
+	/* Handle odd-sized heap: if only a left child exists */
+	if (SORT_UNLIKELY(Child == N - 1)) {
+		A[hole] = A[Child];
+		hole = Child;
+	}
+
+	/* Phase 2: bubble the saved element back up from the leaf.
+	   Usually only 0-2 levels since most elements belong near the bottom. */
+	while (hole > i) {
+		int parent = (hole - 1) / 2;
+		if ((*cmp)(&Tmp, &A[parent]) > 0) {
+			A[hole] = A[parent];
+			hole = parent;
+		} else
 			break;
 	}
-	A[i] = Tmp;
+	A[hole] = Tmp;
 }
 
 void VoidSort(ElementType A[], int N, CmpFunction *cmp) {
@@ -80,7 +117,7 @@ void VoidSort(ElementType A[], int N, CmpFunction *cmp) {
 	i = A[0];
 }
 
-void HeapSort(ElementType A[], int N, CmpFunction *cmp) {
+void SORT_HOT HeapSort(ElementType A[], int N, CmpFunction *cmp) {
 	int i;
 
 	for (i = N / 2; i >= 0; i--) /* BuildHeap */
@@ -93,35 +130,40 @@ void HeapSort(ElementType A[], int N, CmpFunction *cmp) {
 
 /* Merge */
 
-void Merge(ElementType A[], ElementType TmpArray[], int Lpos, int Rpos,
+void SORT_HOT Merge(ElementType A[], ElementType TmpArray[], int Lpos, int Rpos,
 		int RightEnd, CmpFunction *cmp) {
-	int i, LeftEnd, NumElements, TmpPos;
+	int LeftEnd, NumElements, TmpPos;
+	int StartPos = Lpos;
 
 	LeftEnd = Rpos - 1;
 	TmpPos = Lpos;
 	NumElements = RightEnd - Lpos + 1;
 
 	/* main loop */
-	while (Lpos <= LeftEnd && Rpos <= RightEnd)
+	while (Lpos <= LeftEnd && Rpos <= RightEnd) {
+		/* Prefetch ahead in both runs to reduce cache misses */
+		SORT_PREFETCH(&A[Lpos + 4]);
+		SORT_PREFETCH(&A[Rpos + 4]);
 		if ((*cmp)(&A[Rpos], &A[Lpos]) >= 0)
 			TmpArray[TmpPos++] = A[Lpos++];
 		else
 			TmpArray[TmpPos++] = A[Rpos++];
+	}
 
 	while (Lpos <= LeftEnd) /* Copy rest of first half */
 		TmpArray[TmpPos++] = A[Lpos++];
 	while (Rpos <= RightEnd) /* Copy rest of second half */
 		TmpArray[TmpPos++] = A[Rpos++];
 
-	/* Copy TmpArray back */
-	for (i = 0; i < NumElements; i++, RightEnd--)
-		A[RightEnd] = TmpArray[RightEnd];
+	/* Copy TmpArray back — memcpy is SIMD-accelerated on modern CPUs,
+	   much faster than the per-element reverse-copy loop it replaces */
+	memcpy(&A[StartPos], &TmpArray[StartPos], NumElements * sizeof(ElementType));
 }
 
 void MSort(ElementType A[], ElementType TmpArray[], int Left, int Right, CmpFunction *cmp) {
 	int Center;
 
-	if (Left < Right) {
+	if (SORT_LIKELY(Left < Right)) {
 		Center = (Left + Right) / 2;
 		MSort(A, TmpArray, Left, Center, cmp);
 		MSort(A, TmpArray, Center + 1, Right, cmp);
@@ -129,18 +171,12 @@ void MSort(ElementType A[], ElementType TmpArray[], int Left, int Right, CmpFunc
 	}
 }
 
-void MergeSort(ElementType A[], int N, CmpFunction *cmp) {
+void SORT_HOT MergeSort(ElementType A[], int N, CmpFunction *cmp) {
 	ElementType *TmpArray;
 
-	/* WTF : need to be improved !!! FIXME do sort in place */
-	TmpArray = malloc(N * sizeof(ElementType));
-	if (TmpArray != NULL) {
-		MSort(A, TmpArray, 0, N - 1, cmp);
-		free(TmpArray);
-	} else
-		return;
-
-	/*	croak("No space for tmp array!!!"); */
+	Newx(TmpArray, N, ElementType);
+	MSort(A, TmpArray, 0, N - 1, cmp);
+	Safefree(TmpArray);
 }
 
 /* Quick Sort */
@@ -163,36 +199,154 @@ ElementType Median3(ElementType A[], int Left, int Right, CmpFunction *cmp) {
 	return A[Right - 1]; /* Return pivot */
 }
 
-#define Cutoff ( 3 )
+/* Cutoff for switching to insertion sort.
+   16 is well-tuned for modern CPUs: small enough to benefit from
+   O(n^2) on tiny inputs, large enough to reduce recursion overhead
+   and exploit cache-line-sized working sets. */
+#define Cutoff ( 16 )
 
-void Qsort(ElementType A[], int Left, int Right, CmpFunction *cmp) {
+void SORT_HOT Qsort(ElementType A[], int Left, int Right, CmpFunction *cmp) {
 	int i, j;
 	ElementType Pivot;
 
-	if (Left + Cutoff <= Right) {
+	/* Tail-call optimization: loop on the larger partition,
+	   recurse on the smaller one. Guarantees O(log n) stack depth. */
+	while (Left + Cutoff <= Right) {
 		Pivot = Median3(A, Left, Right, cmp);
 		i = Left;
 		j = Right - 1;
 		for (;;) {
 			while ((*cmp)(&Pivot, &A[++i]) > 0) {}
 			while ((*cmp)(&A[--j], &Pivot) > 0) {}
-			if (i < j)
+			if (SORT_LIKELY(i < j))
 				Swap(&A[i], &A[j]);
 			else
 				break;
 		}
 		Swap(&A[i], &A[Right - 1]); /* Restore pivot */
 
-		Qsort(A, Left, i - 1, cmp);
-		Qsort(A, i + 1, Right, cmp);
-	} else
-		/* Do an insertion sort on the subarray */
-		InsertionSort( A + Left, Right - Left + 1, cmp);
+		/* Recurse on smaller partition, loop on larger */
+		if (i - Left < Right - i) {
+			Qsort(A, Left, i - 1, cmp);
+			Left = i + 1;
+		} else {
+			Qsort(A, i + 1, Right, cmp);
+			Right = i - 1;
+		}
+	}
 
+	/* Insertion sort on small remaining subarray */
+	if (Left < Right)
+		InsertionSort(A + Left, Right - Left + 1, cmp);
 }
 
-void QuickSort(ElementType A[], int N, CmpFunction *cmp) {
+void SORT_HOT QuickSort(ElementType A[], int N, CmpFunction *cmp) {
 	Qsort(A, 0, N - 1, cmp);
+}
+
+/* ==========================================================================
+   Radix Sort — O(n) for integers
+
+   LSD (Least Significant Digit) radix sort using 8-bit digits (4 passes
+   for 32-bit, 8 passes for 64-bit). Handles negative numbers by flipping
+   the sign bit so they sort correctly in unsigned order.
+
+   This is the single biggest performance win for integer sorting on large
+   arrays — O(n) vs O(n log n) for comparison-based sorts.
+   ========================================================================== */
+
+#define RADIX_BITS 8
+#define RADIX_SIZE (1 << RADIX_BITS)   /* 256 buckets */
+#define RADIX_MASK (RADIX_SIZE - 1)
+
+/* Number of passes needed for the IV type */
+#define RADIX_PASSES (sizeof(IV) / sizeof(unsigned char))
+
+/* Convert signed IV to unsigned for correct radix sort ordering.
+   Flips the sign bit so negative numbers sort before positives. */
+SORT_INLINE UV iv_to_sortable(IV v) {
+	return (UV)v ^ ((UV)1 << (sizeof(UV) * 8 - 1));
+}
+
+SORT_INLINE IV sortable_to_iv(UV v) {
+	return (IV)(v ^ ((UV)1 << (sizeof(UV) * 8 - 1)));
+}
+
+void SORT_HOT RadixSort(ElementType A[], int N) {
+	int pass, i;
+	UV *sortable;      /* unsigned keys for correct ordering */
+	UV *buffer;        /* scratch space for redistribution */
+	int counts[RADIX_SIZE];
+
+	if (N <= 1) return;
+
+	/* For small arrays, quicksort is faster due to radix overhead */
+	if (N <= 64) {
+		QuickSort(A, N, compare_int);
+		return;
+	}
+
+	Newx(sortable, N, UV);
+	Newx(buffer, N, UV);
+
+	/* Convert to unsigned sortable keys */
+	for (i = 0; i < N; i++) {
+		SORT_PREFETCH(&A[i + 8]);
+		sortable[i] = iv_to_sortable(A[i].i);
+	}
+
+	/* LSD radix sort: process each byte from least to most significant */
+	for (pass = 0; pass < (int)RADIX_PASSES; pass++) {
+		int shift = pass * RADIX_BITS;
+
+		/* Count occurrences of each digit */
+		memset(counts, 0, sizeof(counts));
+		for (i = 0; i < N; i++) {
+			SORT_PREFETCH(&sortable[i + 8]);
+			counts[(sortable[i] >> shift) & RADIX_MASK]++;
+		}
+
+		/* Check if this pass is a no-op (all same digit) */
+		{
+			int skip = 0;
+			for (i = 0; i < RADIX_SIZE; i++) {
+				if (counts[i] == N) { skip = 1; break; }
+			}
+			if (skip) continue;
+		}
+
+		/* Convert counts to prefix sums (stable sort positions) */
+		{
+			int total = 0, old_count;
+			for (i = 0; i < RADIX_SIZE; i++) {
+				old_count = counts[i];
+				counts[i] = total;
+				total += old_count;
+			}
+		}
+
+		/* Distribute elements into buffer */
+		for (i = 0; i < N; i++) {
+			int digit = (sortable[i] >> shift) & RADIX_MASK;
+			buffer[counts[digit]++] = sortable[i];
+		}
+
+		/* Swap pointers instead of copying back */
+		{
+			UV *tmp = sortable;
+			sortable = buffer;
+			buffer = tmp;
+		}
+	}
+
+	/* Convert back to signed and store in output */
+	for (i = 0; i < N; i++) {
+		A[i].i = sortable_to_iv(sortable[i]);
+	}
+
+	/* Free whichever buffer wasn't swapped into sortable last */
+	Safefree(sortable);
+	Safefree(buffer);
 }
 
 /* Places the kth smallest element in the kth position */
