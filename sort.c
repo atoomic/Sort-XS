@@ -132,15 +132,9 @@ void MSort(ElementType A[], ElementType TmpArray[], int Left, int Right, CmpFunc
 void MergeSort(ElementType A[], int N, CmpFunction *cmp) {
 	ElementType *TmpArray;
 
-	/* WTF : need to be improved !!! FIXME do sort in place */
-	TmpArray = malloc(N * sizeof(ElementType));
-	if (TmpArray != NULL) {
-		MSort(A, TmpArray, 0, N - 1, cmp);
-		free(TmpArray);
-	} else
-		return;
-
-	/*	croak("No space for tmp array!!!"); */
+	Newx(TmpArray, N, ElementType);
+	MSort(A, TmpArray, 0, N - 1, cmp);
+	Safefree(TmpArray);
 }
 
 /* Quick Sort */
