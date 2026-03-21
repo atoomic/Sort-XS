@@ -45,6 +45,7 @@ SV* _jump_to_sort(const SortAlgo method, const SortType type, SV* array) {
 	AV* av;
 	AV* input;
 	SV* reply;
+	SV** svp;
 	ElementType *elements;
 	int needs_free = 0;
 
@@ -73,13 +74,18 @@ SV* _jump_to_sort(const SortAlgo method, const SortType type, SV* array) {
 		needs_free = 1;
 	}
 
+	/* Direct access to AV's internal SV** array — avoids per-element
+	   bounds checking and magic handling from av_fetch() */
+	svp = AvARRAY(input);
+
 	int i;
-	for ( i = 0; i < count; ++i) {
-		if ( type == INT ) {
-			elements[i].i = SvIV(*av_fetch(input, i, 0));
-		} else {
-			elements[i].s = SvPV_nolen(*av_fetch(input, i, 0));
-		}
+	/* Hoisted type check: separate loops eliminate per-element branch */
+	if ( type == INT ) {
+		for ( i = 0; i < count; ++i)
+			elements[i].i = SvIV(svp[i]);
+	} else {
+		for ( i = 0; i < count; ++i)
+			elements[i].s = SvPV_nolen(svp[i]);
 	}
 
 	/* map to the c method */
@@ -88,13 +94,13 @@ SV* _jump_to_sort(const SortAlgo method, const SortType type, SV* array) {
 	/* pre-extend the output AV to avoid incremental reallocation */
 	av_extend(av, size);
 
-	/* convert into perl types */
-	for ( i = 0; i < count; ++i) {
-		if ( type == INT ) {
+	/* convert into perl types — hoisted type check */
+	if ( type == INT ) {
+		for ( i = 0; i < count; ++i)
 			av_push(av, newSViv(elements[i].i));
-		} else {
+	} else {
+		for ( i = 0; i < count; ++i)
 			av_push(av, newSVpv(elements[i].s, 0));
-		}
 	}
 
 	if (needs_free)
