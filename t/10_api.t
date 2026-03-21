@@ -12,6 +12,11 @@ my $tests = {
         [ 'aa' .. 'ae', 'ac' .. 'am' ],
         [ 'z' .. 'a' ],
         [ 'a' .. 'z' ]
+    ],
+    float => [
+        [ 3.14, 1.41, 2.72, 0.58 ],
+        [ -1.5, 0.0, 2.3, -0.7, 1.1 ],
+        [ 100.1, 50.5, 75.3, 25.2 ],
     ]
 };
 
@@ -22,6 +27,7 @@ foreach my $type ( keys %$tests ) {
         my @sorted;
         @sorted = sort { $a <=> $b } @$set if ( $type eq 'integer' );
         @sorted = sort { $a cmp $b } @$set if ( $type eq 'string' );
+        @sorted = sort { $a <=> $b } @$set if ( $type eq 'float' );
 
         if ( $type eq 'integer' ) {
             is_deeply( xsort($set), \@sorted,
@@ -43,6 +49,18 @@ foreach my $type ( keys %$tests ) {
             map {
                 is_deeply( ixsort( $set, algorithm => $_ ),
                     \@sorted, "ixsort $type use algorithm $_" )
+            } @algos;
+
+        }
+        elsif ( $type eq 'float' ) {
+
+            # check fxsort usage
+            is_deeply( fxsort( list => $set ),
+                \@sorted, "fxsort $type using a hash argument" );
+
+            map {
+                is_deeply( fxsort( $set, algorithm => $_ ),
+                    \@sorted, "fxsort $type use algorithm $_" )
             } @algos;
 
         }

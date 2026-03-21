@@ -15,6 +15,10 @@ int compare_str(const ElementType *a, const ElementType *b) {
 	return strcmp(a->s, b->s);
 }
 
+int compare_float(const ElementType *a, const ElementType *b) {
+	return (a->f < b->f ? -1 : (a->f > b->f ? 1 : 0));
+}
+
 /*
   A > B
   cmp(A, B) > 0

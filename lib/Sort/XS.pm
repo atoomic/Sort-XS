@@ -2,7 +2,7 @@ package Sort::XS;
 use strict;
 use warnings;
 use base Exporter::;
-our @EXPORT = qw(xsort ixsort sxsort);
+our @EXPORT = qw(xsort ixsort sxsort fxsort);
 
 our $VERSION = '0.30';
 require XSLoader;
@@ -25,6 +25,13 @@ my $_mapping = {
     merge_str     => \&Sort::XS::merge_sort_str,
     insertion_str => \&Sort::XS::insertion_sort_str,
     perl_str      => \&_perl_sort_str,
+
+    # float sorting
+    quick_float     => \&Sort::XS::quick_sort_float,
+    heap_float      => \&Sort::XS::heap_sort_float,
+    merge_float     => \&Sort::XS::merge_sort_float,
+    insertion_float => \&Sort::XS::insertion_sort_float,
+    perl_float      => \&_perl_sort_float,
 };
 
 # API to call XS subs
@@ -66,8 +73,14 @@ sub xsort {
     }
     map { $params{$_} = $args{$_} || $params{$_}; } qw/algorithm type/;
 
-    my $type =
-      ( defined $params{type} && $params{type} eq 'string' ) ? '_str' : '';
+    my $type = '';
+    if ( defined $params{type} ) {
+        if ( $params{type} eq 'string' ) {
+            $type = '_str';
+        } elsif ( $params{type} eq 'float' ) {
+            $type = '_float';
+        }
+    }
     my $sub = $_mapping->{ $params{algorithm} . $type };
     croak( ERR_MSG_UNKNOWN_ALGO, $params{algorithm} ) unless defined $sub;
 
@@ -84,6 +97,11 @@ sub sxsort {
     xsort( @_, type => 'string' );
 }
 
+# shortcut to xsort with floats
+sub fxsort {
+    xsort( @_, type => 'float' );
+}
+
 sub _perl_sort {
     my $list = shift;
     my @sorted = sort { $a <=> $b } @{$list};
@@ -93,6 +111,12 @@ sub _perl_sort {
 sub _perl_sort_str {
     my $list = shift;
     my @sorted = sort { $a cmp $b } @{$list};
+    return \@sorted;
+}
+
+sub _perl_sort_float {
+    my $list = shift;
+    my @sorted = sort { $a <=> $b } @{$list};
     return \@sorted;
 }
 
@@ -469,7 +493,7 @@ Nicolas R., E<lt>me@eboxr.comE<gt>
 
 =head1 CONTRIBUTORS
 
-Salvador Fandi–o
+Salvador Fandiï¿½o
 
 =head1 SEE ALSO
 
