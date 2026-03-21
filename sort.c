@@ -70,24 +70,44 @@ void ShellSort(ElementType A[], int N, CmpFunction *cmp) {
 	}
 }
 
-/* Heap */
+/* Heap — Floyd's bottom-up sift optimization.
+   Standard sift-down does 2 comparisons per level (child vs child, then winner
+   vs parent). Floyd's variant first sifts the hole all the way down (1 cmp/level),
+   then bubbles back up. This cuts comparisons by ~50% for large heaps because
+   most elements end up near the bottom anyway. */
 
 #define LeftChild( i )  ( 2 * ( i ) + 1 )
 
 void PercDown(ElementType A[], int i, int N, CmpFunction *cmp) {
 	int Child;
-	ElementType Tmp;
+	ElementType Tmp = A[i];
+	int hole = i;
 
-	for (Tmp = A[i]; LeftChild( i ) < N; i = Child) {
-		Child = LeftChild( i );
-		if (Child != N - 1 && (*cmp)(&A[Child + 1], &A[Child]) > 0)
+	/* Phase 1: sift the hole down to a leaf, always following the larger child.
+	   Only 1 comparison per level (child vs child). */
+	while ((Child = LeftChild(hole)) < N - 1) {
+		if ((*cmp)(&A[Child + 1], &A[Child]) > 0)
 			Child++;
-		if ((*cmp)(&A[Child], &Tmp) > 0)
-			A[i] = A[Child];
-		else
+		A[hole] = A[Child];
+		hole = Child;
+	}
+	/* Handle odd-sized heap: if only a left child exists */
+	if (Child == N - 1) {
+		A[hole] = A[Child];
+		hole = Child;
+	}
+
+	/* Phase 2: bubble the saved element back up from the leaf.
+	   Usually only 0-2 levels since most elements belong near the bottom. */
+	while (hole > i) {
+		int parent = (hole - 1) / 2;
+		if ((*cmp)(&Tmp, &A[parent]) > 0) {
+			A[hole] = A[parent];
+			hole = parent;
+		} else
 			break;
 	}
-	A[i] = Tmp;
+	A[hole] = Tmp;
 }
 
 void VoidSort(ElementType A[], int N, CmpFunction *cmp) {
@@ -110,7 +130,8 @@ void HeapSort(ElementType A[], int N, CmpFunction *cmp) {
 
 void Merge(ElementType A[], ElementType TmpArray[], int Lpos, int Rpos,
 		int RightEnd, CmpFunction *cmp) {
-	int i, LeftEnd, NumElements, TmpPos;
+	int LeftEnd, NumElements, TmpPos;
+	int StartPos = Lpos;
 
 	LeftEnd = Rpos - 1;
 	TmpPos = Lpos;
@@ -128,9 +149,9 @@ void Merge(ElementType A[], ElementType TmpArray[], int Lpos, int Rpos,
 	while (Rpos <= RightEnd) /* Copy rest of second half */
 		TmpArray[TmpPos++] = A[Rpos++];
 
-	/* Copy TmpArray back */
-	for (i = 0; i < NumElements; i++, RightEnd--)
-		A[RightEnd] = TmpArray[RightEnd];
+	/* Copy TmpArray back — memcpy is SIMD-accelerated on modern CPUs,
+	   much faster than the per-element reverse-copy loop it replaces */
+	memcpy(&A[StartPos], &TmpArray[StartPos], NumElements * sizeof(ElementType));
 }
 
 void MSort(ElementType A[], ElementType TmpArray[], int Left, int Right, CmpFunction *cmp) {
