@@ -7,11 +7,11 @@
 #include "sort.h"
 
 /* basic comparison operators */
-int compare_int(const ElementType *a, const ElementType *b) {
-        return (a->i < b->i ? -1 : (a->i > b->i ? 1 : 0));
+SORT_INLINE int compare_int(const ElementType *a, const ElementType *b) {
+        return (a->i > b->i) - (a->i < b->i);
 }
 
-int compare_str(const ElementType *a, const ElementType *b) {
+SORT_INLINE int compare_str(const ElementType *a, const ElementType *b) {
 	return strcmp(a->s, b->s);
 }
 
@@ -21,7 +21,7 @@ int compare_str(const ElementType *a, const ElementType *b) {
 */
 
 /* sorting methods */
-void Swap(ElementType *Lhs, ElementType *Rhs) {
+SORT_INLINE void Swap(ElementType *Lhs, ElementType *Rhs) {
 	ElementType Tmp = *Lhs;
 	*Lhs = *Rhs;
 	*Rhs = Tmp;
@@ -40,10 +40,24 @@ void InsertionSort(ElementType A[], int N, CmpFunction *cmp) {
 }
 
 void ShellSort(ElementType A[], int N, CmpFunction *cmp) {
-	int i, j, Increment;
+	int i, j, Increment, gi;
 	ElementType Tmp;
 
-	for (Increment = N / 2; Increment > 0; Increment /= 2)
+	/* Ciura's gap sequence — empirically optimal for modern CPUs.
+	   Extended beyond 701 by multiplying by 2.25 (Ciura's suggested ratio). */
+	static const int ciura_gaps[] = {
+		1, 4, 10, 23, 57, 132, 301, 701,
+		1577, 3548, 7983, 17961, 40412, 90927, 204585, 460316
+	};
+	static const int n_gaps = sizeof(ciura_gaps) / sizeof(ciura_gaps[0]);
+
+	/* Find starting gap */
+	for (gi = n_gaps - 1; gi >= 0; gi--)
+		if (ciura_gaps[gi] < N)
+			break;
+
+	for (; gi >= 0; gi--) {
+		Increment = ciura_gaps[gi];
 		for (i = Increment; i < N; i++) {
 			Tmp = A[i];
 			for (j = i; j >= Increment; j -= Increment)
@@ -53,26 +67,47 @@ void ShellSort(ElementType A[], int N, CmpFunction *cmp) {
 					break;
 			A[j] = Tmp;
 		}
+	}
 }
 
-/* Heap */
+/* Heap — Floyd's bottom-up sift optimization.
+   Standard sift-down does 2 comparisons per level (child vs child, then winner
+   vs parent). Floyd's variant first sifts the hole all the way down (1 cmp/level),
+   then bubbles back up. This cuts comparisons by ~50% for large heaps because
+   most elements end up near the bottom anyway. */
 
 #define LeftChild( i )  ( 2 * ( i ) + 1 )
 
 void PercDown(ElementType A[], int i, int N, CmpFunction *cmp) {
 	int Child;
-	ElementType Tmp;
+	ElementType Tmp = A[i];
+	int hole = i;
 
-	for (Tmp = A[i]; LeftChild( i ) < N; i = Child) {
-		Child = LeftChild( i );
-		if (Child != N - 1 && (*cmp)(&A[Child + 1], &A[Child]) > 0)
+	/* Phase 1: sift the hole down to a leaf, always following the larger child.
+	   Only 1 comparison per level (child vs child). */
+	while ((Child = LeftChild(hole)) < N - 1) {
+		if ((*cmp)(&A[Child + 1], &A[Child]) > 0)
 			Child++;
-		if ((*cmp)(&A[Child], &Tmp) > 0)
-			A[i] = A[Child];
-		else
+		A[hole] = A[Child];
+		hole = Child;
+	}
+	/* Handle odd-sized heap: if only a left child exists */
+	if (Child == N - 1) {
+		A[hole] = A[Child];
+		hole = Child;
+	}
+
+	/* Phase 2: bubble the saved element back up from the leaf.
+	   Usually only 0-2 levels since most elements belong near the bottom. */
+	while (hole > i) {
+		int parent = (hole - 1) / 2;
+		if ((*cmp)(&Tmp, &A[parent]) > 0) {
+			A[hole] = A[parent];
+			hole = parent;
+		} else
 			break;
 	}
-	A[i] = Tmp;
+	A[hole] = Tmp;
 }
 
 void VoidSort(ElementType A[], int N, CmpFunction *cmp) {
@@ -95,7 +130,8 @@ void HeapSort(ElementType A[], int N, CmpFunction *cmp) {
 
 void Merge(ElementType A[], ElementType TmpArray[], int Lpos, int Rpos,
 		int RightEnd, CmpFunction *cmp) {
-	int i, LeftEnd, NumElements, TmpPos;
+	int LeftEnd, NumElements, TmpPos;
+	int StartPos = Lpos;
 
 	LeftEnd = Rpos - 1;
 	TmpPos = Lpos;
@@ -113,9 +149,9 @@ void Merge(ElementType A[], ElementType TmpArray[], int Lpos, int Rpos,
 	while (Rpos <= RightEnd) /* Copy rest of second half */
 		TmpArray[TmpPos++] = A[Rpos++];
 
-	/* Copy TmpArray back */
-	for (i = 0; i < NumElements; i++, RightEnd--)
-		A[RightEnd] = TmpArray[RightEnd];
+	/* Copy TmpArray back — memcpy is SIMD-accelerated on modern CPUs,
+	   much faster than the per-element reverse-copy loop it replaces */
+	memcpy(&A[StartPos], &TmpArray[StartPos], NumElements * sizeof(ElementType));
 }
 
 void MSort(ElementType A[], ElementType TmpArray[], int Left, int Right, CmpFunction *cmp) {
@@ -157,13 +193,19 @@ ElementType Median3(ElementType A[], int Left, int Right, CmpFunction *cmp) {
 	return A[Right - 1]; /* Return pivot */
 }
 
-#define Cutoff ( 3 )
+/* Cutoff for switching to insertion sort.
+   16 is well-tuned for modern CPUs: small enough to benefit from
+   O(n^2) on tiny inputs, large enough to reduce recursion overhead
+   and exploit cache-line-sized working sets. */
+#define Cutoff ( 16 )
 
 void Qsort(ElementType A[], int Left, int Right, CmpFunction *cmp) {
 	int i, j;
 	ElementType Pivot;
 
-	if (Left + Cutoff <= Right) {
+	/* Tail-call optimization: loop on the larger partition,
+	   recurse on the smaller one. Guarantees O(log n) stack depth. */
+	while (Left + Cutoff <= Right) {
 		Pivot = Median3(A, Left, Right, cmp);
 		i = Left;
 		j = Right - 1;
@@ -177,12 +219,19 @@ void Qsort(ElementType A[], int Left, int Right, CmpFunction *cmp) {
 		}
 		Swap(&A[i], &A[Right - 1]); /* Restore pivot */
 
-		Qsort(A, Left, i - 1, cmp);
-		Qsort(A, i + 1, Right, cmp);
-	} else
-		/* Do an insertion sort on the subarray */
-		InsertionSort( A + Left, Right - Left + 1, cmp);
+		/* Recurse on smaller partition, loop on larger */
+		if (i - Left < Right - i) {
+			Qsort(A, Left, i - 1, cmp);
+			Left = i + 1;
+		} else {
+			Qsort(A, i + 1, Right, cmp);
+			Right = i - 1;
+		}
+	}
 
+	/* Insertion sort on small remaining subarray */
+	if (Left < Right)
+		InsertionSort(A + Left, Right - Left + 1, cmp);
 }
 
 void QuickSort(ElementType A[], int N, CmpFunction *cmp) {
