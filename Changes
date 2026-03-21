@@ -1,3 +1,8 @@
+{{$NEXT}}
+    - Switch to Dist::Zilla for distribution management
+    - Generate README.md from POD
+    - Version from git tags via Git::NextVersion
+
 0.3
     - use IV type for integer keys and a proper comparison funtion that doesn't overflows
     - 'fair' compare : do not add the extra sub call
@@ -9,4 +14,3 @@
     - update pod
 
 0.1 alpha release, only sort integers
-
