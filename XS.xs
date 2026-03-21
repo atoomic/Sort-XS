@@ -18,7 +18,7 @@ typedef void (*sort_function_t)(ElementType A[ ], int N, CmpFunction *cmp);
 
 /* The enum and map are in the same order for easy lookup */
 typedef enum { VOID, INSERTION, SHELL, HEAP, MERGE, QUICK } SortAlgo;
-typedef enum { INT, STR } SortType;
+typedef enum { INT, STR, FLOAT } SortType;
 
 sort_function_t sort_function_map[] = {
 		VoidSort
@@ -32,7 +32,8 @@ sort_function_t sort_function_map[] = {
 
 CmpFunction *cmp_functionmap[] = {
 		compare_int,
-		compare_str
+		compare_str,
+		compare_float
 };
 
 
@@ -60,6 +61,8 @@ SV* _jump_to_sort(const SortAlgo method, const SortType type, SV* array) {
 	for ( i = 0; i <= size; ++i) {
 		if ( type == INT ) {
 			elements[i].i = SvIV(*av_fetch(input, i, 0));
+		} else if ( type == FLOAT ) {
+			elements[i].f = SvNV(*av_fetch(input, i, 0));
 		} else {
 			elements[i].s = SvPV_nolen(*av_fetch(input, i, 0));
 		}
@@ -73,6 +76,8 @@ SV* _jump_to_sort(const SortAlgo method, const SortType type, SV* array) {
 	for ( i = 0; i <= size; ++i) {
 		if ( type == INT ) {
 			av_push(av, newSViv(elements[i].i));
+		} else if ( type == FLOAT ) {
+			av_push(av, newSVnv(elements[i].f));
 		} else {
 			av_push(av, newSVpv(elements[i].s, 0));
 		}
@@ -158,6 +163,41 @@ SV* quick_sort_str(array)
 	SV* array
 	CODE:
 		RETVAL = _jump_to_sort(QUICK, STR, array);
+	OUTPUT:
+		RETVAL
+
+SV* insertion_sort_float(array)
+	SV* array
+	CODE:
+		RETVAL = _jump_to_sort(INSERTION, FLOAT, array);
+	OUTPUT:
+		RETVAL
+
+SV* shell_sort_float(array)
+	SV* array
+	CODE:
+		RETVAL = _jump_to_sort(SHELL, FLOAT, array);
+	OUTPUT:
+		RETVAL
+
+SV* heap_sort_float(array)
+	SV* array
+	CODE:
+		RETVAL = _jump_to_sort(HEAP, FLOAT, array);
+	OUTPUT:
+		RETVAL
+
+SV* merge_sort_float(array)
+	SV* array
+	CODE:
+		RETVAL = _jump_to_sort(MERGE, FLOAT, array);
+	OUTPUT:
+		RETVAL
+
+SV* quick_sort_float(array)
+	SV* array
+	CODE:
+		RETVAL = _jump_to_sort(QUICK, FLOAT, array);
 	OUTPUT:
 		RETVAL
 

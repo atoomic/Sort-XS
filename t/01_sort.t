@@ -19,6 +19,10 @@ my @tests = (
     { type => 'str', array => [ 'a' .. 'z' ] },
     { type => 'str', array => [ 'cc' .. 'aa', 'bb' .. 'ba' ] },
 
+    { type => 'float', array => [ 3.14, 1.41, 2.72, 0.58 ] },
+    { type => 'float', array => [ -1.5, 0.0, 2.3, -0.7, 1.1 ] },
+    { type => 'float', array => [ 1.0, 1.0, 2.0, 0.5 ] },
+
 );
 
 foreach my $m (qw/insertion shell heap merge quick/) {
@@ -30,8 +34,11 @@ foreach my $m (qw/insertion shell heap merge quick/) {
             my $t = $set->{array};
             @sorted = sort { $a <=> $b } @$t if ( $set->{type} eq 'integer' );
             @sorted = sort { $a cmp $b } @$t if ( $set->{type} eq 'str' );
+            @sorted = sort { $a <=> $b } @$t if ( $set->{type} eq 'float' );
 
-            my $suffix = ( $set->{type} eq 'str' ) ? '_str' : '';
+            my $suffix = '';
+            $suffix = '_str'   if $set->{type} eq 'str';
+            $suffix = '_float' if $set->{type} eq 'float';
 
             my $result = eval "Sort::XS::${m}_sort${suffix}(\$t)";
             is_deeply( $result, \@sorted, "sort using $m on $set->{type}" )
