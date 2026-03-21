@@ -55,7 +55,13 @@ SV* _jump_to_sort(const SortAlgo method, const SortType type, SV* array) {
 		croak ("expecting a reference to an array");	
 		
 	int size = av_len(input);
-	ElementType elements[size+1];
+	int count = size + 1;
+	ElementType *elements;
+
+	/* Heap-allocate instead of VLA to prevent stack overflow on large inputs.
+	 * VLA `ElementType elements[size+1]` is unsafe for unbounded input. */
+	Newx(elements, count, ElementType);
+
 	int i;
 	for ( i = 0; i <= size; ++i) {
 		if ( type == INT ) {
@@ -63,12 +69,11 @@ SV* _jump_to_sort(const SortAlgo method, const SortType type, SV* array) {
 		} else {
 			elements[i].s = SvPV_nolen(*av_fetch(input, i, 0));
 		}
-		/* fprintf(stderr, "number %02d is %d\n", i, elements[i]); */	
 	}
-	
+
 	/* map to the c method */
-	sort_function_map[method]( elements, size + 1, cmp_functionmap[type]);
-	
+	sort_function_map[method]( elements, count, cmp_functionmap[type]);
+
 	/* convert into perl types */
 	for ( i = 0; i <= size; ++i) {
 		if ( type == INT ) {
@@ -76,8 +81,10 @@ SV* _jump_to_sort(const SortAlgo method, const SortType type, SV* array) {
 		} else {
 			av_push(av, newSVpv(elements[i].s, 0));
 		}
-	}	
-	
+	}
+
+	Safefree(elements);
+
 	return reply;
 }
 
