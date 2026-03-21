@@ -8,3 +8,4 @@ Makefile
 blib
 Makefile.old
 MANIFEST.bak
+/.build/

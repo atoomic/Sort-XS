@@ -4,7 +4,7 @@ use warnings;
 use base Exporter::;
 our @EXPORT = qw(xsort ixsort sxsort);
 
-our $VERSION = '0.30';
+our $VERSION = '0.30'; # VERSION
 require XSLoader;
 XSLoader::load( 'Sort::XS', $VERSION );
 use Carp qw/croak/;
@@ -469,7 +469,7 @@ Nicolas R., E<lt>me@eboxr.comE<gt>
 
 =head1 CONTRIBUTORS
 
-Salvador Fandi–o
+Salvador Fandiï¿½o
 
 =head1 SEE ALSO
 
