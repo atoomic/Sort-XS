@@ -16,6 +16,7 @@ my $tests = {
 };
 
 my @algos = qw/quick heap merge insertion perl/;
+my @int_algos = (@algos, 'radix');
 
 foreach my $type ( keys %$tests ) {
     foreach my $set ( @{ $tests->{$type} } ) {
@@ -34,7 +35,7 @@ foreach my $type ( keys %$tests ) {
             map {
                 is_deeply( xsort( $set, algorithm => $_ ),
                     \@sorted, "can sort $type use algorithm $_" )
-            } @algos;
+            } @int_algos;
 
             # check ixsort usage
             is_deeply( ixsort( list => $set ),
@@ -43,7 +44,7 @@ foreach my $type ( keys %$tests ) {
             map {
                 is_deeply( ixsort( $set, algorithm => $_ ),
                     \@sorted, "ixsort $type use algorithm $_" )
-            } @algos;
+            } @int_algos;
 
         }
         else {

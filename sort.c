@@ -27,7 +27,7 @@ SORT_INLINE void Swap(ElementType *Lhs, ElementType *Rhs) {
 	*Rhs = Tmp;
 }
 
-void InsertionSort(ElementType A[], int N, CmpFunction *cmp) {
+void SORT_HOT InsertionSort(ElementType A[], int N, CmpFunction *cmp) {
 	int j, P;
 	ElementType Tmp;
 
@@ -39,7 +39,7 @@ void InsertionSort(ElementType A[], int N, CmpFunction *cmp) {
 	}
 }
 
-void ShellSort(ElementType A[], int N, CmpFunction *cmp) {
+void SORT_HOT ShellSort(ElementType A[], int N, CmpFunction *cmp) {
 	int i, j, Increment, gi;
 	ElementType Tmp;
 
@@ -78,21 +78,23 @@ void ShellSort(ElementType A[], int N, CmpFunction *cmp) {
 
 #define LeftChild( i )  ( 2 * ( i ) + 1 )
 
-void PercDown(ElementType A[], int i, int N, CmpFunction *cmp) {
+void SORT_HOT PercDown(ElementType A[], int i, int N, CmpFunction *cmp) {
 	int Child;
 	ElementType Tmp = A[i];
 	int hole = i;
 
 	/* Phase 1: sift the hole down to a leaf, always following the larger child.
 	   Only 1 comparison per level (child vs child). */
-	while ((Child = LeftChild(hole)) < N - 1) {
+	while (SORT_LIKELY((Child = LeftChild(hole)) < N - 1)) {
+		/* Prefetch the next level's children for cache warmth */
+		SORT_PREFETCH(&A[LeftChild(Child + 1)]);
 		if ((*cmp)(&A[Child + 1], &A[Child]) > 0)
 			Child++;
 		A[hole] = A[Child];
 		hole = Child;
 	}
 	/* Handle odd-sized heap: if only a left child exists */
-	if (Child == N - 1) {
+	if (SORT_UNLIKELY(Child == N - 1)) {
 		A[hole] = A[Child];
 		hole = Child;
 	}
@@ -115,7 +117,7 @@ void VoidSort(ElementType A[], int N, CmpFunction *cmp) {
 	i = A[0];
 }
 
-void HeapSort(ElementType A[], int N, CmpFunction *cmp) {
+void SORT_HOT HeapSort(ElementType A[], int N, CmpFunction *cmp) {
 	int i;
 
 	for (i = N / 2; i >= 0; i--) /* BuildHeap */
@@ -128,7 +130,7 @@ void HeapSort(ElementType A[], int N, CmpFunction *cmp) {
 
 /* Merge */
 
-void Merge(ElementType A[], ElementType TmpArray[], int Lpos, int Rpos,
+void SORT_HOT Merge(ElementType A[], ElementType TmpArray[], int Lpos, int Rpos,
 		int RightEnd, CmpFunction *cmp) {
 	int LeftEnd, NumElements, TmpPos;
 	int StartPos = Lpos;
@@ -138,11 +140,15 @@ void Merge(ElementType A[], ElementType TmpArray[], int Lpos, int Rpos,
 	NumElements = RightEnd - Lpos + 1;
 
 	/* main loop */
-	while (Lpos <= LeftEnd && Rpos <= RightEnd)
+	while (Lpos <= LeftEnd && Rpos <= RightEnd) {
+		/* Prefetch ahead in both runs to reduce cache misses */
+		SORT_PREFETCH(&A[Lpos + 4]);
+		SORT_PREFETCH(&A[Rpos + 4]);
 		if ((*cmp)(&A[Rpos], &A[Lpos]) >= 0)
 			TmpArray[TmpPos++] = A[Lpos++];
 		else
 			TmpArray[TmpPos++] = A[Rpos++];
+	}
 
 	while (Lpos <= LeftEnd) /* Copy rest of first half */
 		TmpArray[TmpPos++] = A[Lpos++];
@@ -157,7 +163,7 @@ void Merge(ElementType A[], ElementType TmpArray[], int Lpos, int Rpos,
 void MSort(ElementType A[], ElementType TmpArray[], int Left, int Right, CmpFunction *cmp) {
 	int Center;
 
-	if (Left < Right) {
+	if (SORT_LIKELY(Left < Right)) {
 		Center = (Left + Right) / 2;
 		MSort(A, TmpArray, Left, Center, cmp);
 		MSort(A, TmpArray, Center + 1, Right, cmp);
@@ -165,7 +171,7 @@ void MSort(ElementType A[], ElementType TmpArray[], int Left, int Right, CmpFunc
 	}
 }
 
-void MergeSort(ElementType A[], int N, CmpFunction *cmp) {
+void SORT_HOT MergeSort(ElementType A[], int N, CmpFunction *cmp) {
 	ElementType *TmpArray;
 
 	Newx(TmpArray, N, ElementType);
@@ -199,7 +205,7 @@ ElementType Median3(ElementType A[], int Left, int Right, CmpFunction *cmp) {
    and exploit cache-line-sized working sets. */
 #define Cutoff ( 16 )
 
-void Qsort(ElementType A[], int Left, int Right, CmpFunction *cmp) {
+void SORT_HOT Qsort(ElementType A[], int Left, int Right, CmpFunction *cmp) {
 	int i, j;
 	ElementType Pivot;
 
@@ -212,7 +218,7 @@ void Qsort(ElementType A[], int Left, int Right, CmpFunction *cmp) {
 		for (;;) {
 			while ((*cmp)(&Pivot, &A[++i]) > 0) {}
 			while ((*cmp)(&A[--j], &Pivot) > 0) {}
-			if (i < j)
+			if (SORT_LIKELY(i < j))
 				Swap(&A[i], &A[j]);
 			else
 				break;
@@ -234,8 +240,113 @@ void Qsort(ElementType A[], int Left, int Right, CmpFunction *cmp) {
 		InsertionSort(A + Left, Right - Left + 1, cmp);
 }
 
-void QuickSort(ElementType A[], int N, CmpFunction *cmp) {
+void SORT_HOT QuickSort(ElementType A[], int N, CmpFunction *cmp) {
 	Qsort(A, 0, N - 1, cmp);
+}
+
+/* ==========================================================================
+   Radix Sort — O(n) for integers
+
+   LSD (Least Significant Digit) radix sort using 8-bit digits (4 passes
+   for 32-bit, 8 passes for 64-bit). Handles negative numbers by flipping
+   the sign bit so they sort correctly in unsigned order.
+
+   This is the single biggest performance win for integer sorting on large
+   arrays — O(n) vs O(n log n) for comparison-based sorts.
+   ========================================================================== */
+
+#define RADIX_BITS 8
+#define RADIX_SIZE (1 << RADIX_BITS)   /* 256 buckets */
+#define RADIX_MASK (RADIX_SIZE - 1)
+
+/* Number of passes needed for the IV type */
+#define RADIX_PASSES (sizeof(IV) / sizeof(unsigned char))
+
+/* Convert signed IV to unsigned for correct radix sort ordering.
+   Flips the sign bit so negative numbers sort before positives. */
+SORT_INLINE UV iv_to_sortable(IV v) {
+	return (UV)v ^ ((UV)1 << (sizeof(UV) * 8 - 1));
+}
+
+SORT_INLINE IV sortable_to_iv(UV v) {
+	return (IV)(v ^ ((UV)1 << (sizeof(UV) * 8 - 1)));
+}
+
+void SORT_HOT RadixSort(ElementType A[], int N) {
+	int pass, i;
+	UV *sortable;      /* unsigned keys for correct ordering */
+	UV *buffer;        /* scratch space for redistribution */
+	int counts[RADIX_SIZE];
+
+	if (N <= 1) return;
+
+	/* For small arrays, quicksort is faster due to radix overhead */
+	if (N <= 64) {
+		QuickSort(A, N, compare_int);
+		return;
+	}
+
+	Newx(sortable, N, UV);
+	Newx(buffer, N, UV);
+
+	/* Convert to unsigned sortable keys */
+	for (i = 0; i < N; i++) {
+		SORT_PREFETCH(&A[i + 8]);
+		sortable[i] = iv_to_sortable(A[i].i);
+	}
+
+	/* LSD radix sort: process each byte from least to most significant */
+	for (pass = 0; pass < (int)RADIX_PASSES; pass++) {
+		int shift = pass * RADIX_BITS;
+
+		/* Count occurrences of each digit */
+		memset(counts, 0, sizeof(counts));
+		for (i = 0; i < N; i++) {
+			SORT_PREFETCH(&sortable[i + 8]);
+			counts[(sortable[i] >> shift) & RADIX_MASK]++;
+		}
+
+		/* Check if this pass is a no-op (all same digit) */
+		{
+			int skip = 0;
+			for (i = 0; i < RADIX_SIZE; i++) {
+				if (counts[i] == N) { skip = 1; break; }
+			}
+			if (skip) continue;
+		}
+
+		/* Convert counts to prefix sums (stable sort positions) */
+		{
+			int total = 0, old_count;
+			for (i = 0; i < RADIX_SIZE; i++) {
+				old_count = counts[i];
+				counts[i] = total;
+				total += old_count;
+			}
+		}
+
+		/* Distribute elements into buffer */
+		for (i = 0; i < N; i++) {
+			int digit = (sortable[i] >> shift) & RADIX_MASK;
+			buffer[counts[digit]++] = sortable[i];
+		}
+
+		/* Swap pointers instead of copying back */
+		{
+			UV *tmp = sortable;
+			sortable = buffer;
+			buffer = tmp;
+		}
+	}
+
+	/* Convert back to signed and store in output */
+	for (i = 0; i < N; i++) {
+		A[i].i = sortable_to_iv(sortable[i]);
+	}
+
+	/* Free whichever buffer wasn't swapped into sortable last */
+	Safefree(sortable);
+	Safefree(buffer);
 }
 
 /* Places the kth smallest element in the kth position */
