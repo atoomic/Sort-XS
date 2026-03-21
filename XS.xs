@@ -17,8 +17,9 @@
 typedef void (*sort_function_t)(ElementType A[ ], int N, CmpFunction *cmp);
 
 /* The enum and map are in the same order for easy lookup */
-typedef enum { VOID, INSERTION, SHELL, HEAP, MERGE, QUICK } SortAlgo;
-typedef enum { INT, STR } SortType;
+/* Prefixed to avoid conflicts with Windows macros (VOID, INT) from winnt.h */
+typedef enum { SORT_VOID, SORT_INSERTION, SORT_SHELL, SORT_HEAP, SORT_MERGE, SORT_QUICK } SortAlgo;
+typedef enum { SORT_INT, SORT_STR } SortType;
 
 sort_function_t sort_function_map[] = {
 		VoidSort
@@ -58,7 +59,7 @@ SV* _jump_to_sort(const SortAlgo method, const SortType type, SV* array) {
 	ElementType elements[size+1];
 	int i;
 	for ( i = 0; i <= size; ++i) {
-		if ( type == INT ) {
+		if ( type == SORT_INT ) {
 			elements[i].i = SvIV(*av_fetch(input, i, 0));
 		} else {
 			elements[i].s = SvPV_nolen(*av_fetch(input, i, 0));
@@ -71,7 +72,7 @@ SV* _jump_to_sort(const SortAlgo method, const SortType type, SV* array) {
 	
 	/* convert into perl types */
 	for ( i = 0; i <= size; ++i) {
-		if ( type == INT ) {
+		if ( type == SORT_INT ) {
 			av_push(av, newSViv(elements[i].i));
 		} else {
 			av_push(av, newSVpv(elements[i].s, 0));
@@ -94,76 +95,76 @@ PROTOTYPES: ENABLE
 SV* insertion_sort(array)
 		SV* array
 		CODE:
-			RETVAL = _jump_to_sort(INSERTION, INT, array);
+			RETVAL = _jump_to_sort(SORT_INSERTION, SORT_INT, array);
 		OUTPUT:
 			RETVAL
 
 SV* insertion_sort_str(array)
 		SV* array
 		CODE:
-			RETVAL = _jump_to_sort(INSERTION, STR, array);
+			RETVAL = _jump_to_sort(SORT_INSERTION, SORT_STR, array);
 		OUTPUT:
 			RETVAL
 			
 SV* shell_sort(array)
 	SV* array
 	CODE:
-		RETVAL = _jump_to_sort(SHELL, INT, array);
+		RETVAL = _jump_to_sort(SORT_SHELL, SORT_INT, array);
 	OUTPUT:
 		RETVAL
 
 SV* shell_sort_str(array)
 	SV* array
 	CODE:
-		RETVAL = _jump_to_sort(SHELL, STR, array);
+		RETVAL = _jump_to_sort(SORT_SHELL, SORT_STR, array);
 	OUTPUT:
 		RETVAL
 
 SV* heap_sort(array)
 	SV* array
 	CODE:
-		RETVAL = _jump_to_sort(HEAP, INT, array);
+		RETVAL = _jump_to_sort(SORT_HEAP, SORT_INT, array);
 	OUTPUT:
 		RETVAL
 
 SV* heap_sort_str(array)
 	SV* array
 	CODE:
-		RETVAL = _jump_to_sort(HEAP, STR, array);
+		RETVAL = _jump_to_sort(SORT_HEAP, SORT_STR, array);
 	OUTPUT:
 		RETVAL
 
 SV* merge_sort(array)
 	SV* array
 	CODE:
-		RETVAL = _jump_to_sort(MERGE, INT, array);
+		RETVAL = _jump_to_sort(SORT_MERGE, SORT_INT, array);
 	OUTPUT:
 		RETVAL
 
 SV* merge_sort_str(array)
 	SV* array
 	CODE:
-		RETVAL = _jump_to_sort(MERGE, STR, array);
+		RETVAL = _jump_to_sort(SORT_MERGE, SORT_STR, array);
 	OUTPUT:
 		RETVAL
 
 SV* quick_sort(array)
 	SV* array
 	CODE:
-		RETVAL = _jump_to_sort(QUICK, INT, array);
+		RETVAL = _jump_to_sort(SORT_QUICK, SORT_INT, array);
 	OUTPUT:
 		RETVAL
 
 SV* quick_sort_str(array)
 	SV* array
 	CODE:
-		RETVAL = _jump_to_sort(QUICK, STR, array);
+		RETVAL = _jump_to_sort(SORT_QUICK, SORT_STR, array);
 	OUTPUT:
 		RETVAL
 
 SV* void_sort(array)
 	SV* array
 	CODE:
-		RETVAL = _jump_to_sort(VOID, INT, array);
+		RETVAL = _jump_to_sort(SORT_VOID, SORT_INT, array);
 	OUTPUT:
 		RETVAL
