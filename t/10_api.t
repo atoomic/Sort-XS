@@ -15,7 +15,7 @@ my $tests = {
     ]
 };
 
-my @algos = qw/quick heap merge insertion perl/;
+my @algos = qw/quick heap merge insertion shell perl/;
 
 foreach my $type ( keys %$tests ) {
     foreach my $set ( @{ $tests->{$type} } ) {

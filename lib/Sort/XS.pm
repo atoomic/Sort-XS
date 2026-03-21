@@ -17,6 +17,7 @@ my $_mapping = {
     heap      => \&Sort::XS::heap_sort,
     merge     => \&Sort::XS::merge_sort,
     insertion => \&Sort::XS::insertion_sort,
+    shell     => \&Sort::XS::shell_sort,
     perl      => \&_perl_sort,
 
     # string sorting
@@ -24,6 +25,7 @@ my $_mapping = {
     heap_str      => \&Sort::XS::heap_sort_str,
     merge_str     => \&Sort::XS::merge_sort_str,
     insertion_str => \&Sort::XS::insertion_sort_str,
+    shell_str     => \&Sort::XS::shell_sort_str,
     perl_str      => \&_perl_sort_str,
 };
 
@@ -233,6 +235,7 @@ you can use any of the following choices
     heap  # heapsort
     merge
     insertion # not recommended ( slow )
+    shell # shellsort
     perl # use standard perl sort method instead of c implementation
 
 =item type [ optional, default = integer ]
