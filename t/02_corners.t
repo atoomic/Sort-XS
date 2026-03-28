@@ -30,7 +30,7 @@ for my $n (5, 5, 10, 10, 20, 20) {
 
     my @sorted_data = sort { int($a) <=> int($b) } @data;
 
-    for my $algorithm (qw(insertion shell heap merge)) {
+    for my $algorithm (qw(insertion shell heap merge quick)) {
         my $sorter = do { no strict 'refs'; \&{"Sort::XS::${algorithm}_sort"} };
         is_deeply($sorter->(\@data),
                   \@sorted_data,
