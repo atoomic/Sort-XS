@@ -111,12 +111,16 @@ void PercDown(ElementType A[], int i, int N, CmpFunction *cmp) {
 }
 
 void VoidSort(ElementType A[], int N, CmpFunction *cmp) {
-	ElementType i;
-	i = A[0];
+	if (N > 0) {
+		ElementType i;
+		i = A[0];
+	}
 }
 
 void HeapSort(ElementType A[], int N, CmpFunction *cmp) {
 	int i;
+
+	if (N <= 1) return;
 
 	for (i = N / 2; i >= 0; i--) /* BuildHeap */
 		PercDown(A, i, N, cmp);
@@ -266,78 +270,3 @@ void Qselect(ElementType A[], int k, int Left, int Right, CmpFunction *cmp) {
 		InsertionSort(A + Left, Right - Left + 1, cmp);
 }
 
-/*
- int main( int argc, char *argv[] )
- {
- ElementType test[5];
- test[0].i = 5;
- test[1].i = 3;
- test[2].i = 4;
- test[3].i = 8;
- test[4].i = 1;
-
- InsertionSort(test, 5, compare_int);
-
- int i;
- for (i = 0; i < 5; ++i) {
- printf("%02d -> %d\n", i, test[i].i);
- }
-
-
- int tab[10];
- int *oth;
-
- for (i = 0; i < 10; ++i) {
-	 tab[i] = i + 1;
- }
-
- for (i = 0; i < 10; ++i) {
-	 printf("before i[%d] = %d\n", i, tab[i]);
- }
-
- oth = (int *) tab + 5;
-
- for (i = 0; i < 10; ++i) {
-	 printf("after i[%d] = %d\n", i, oth[i]);
- }
-
- char ctab[10];
- char *coth;
-
- for (i = 0; i < 10; ++i) {
-	 ctab[i] = 'a' + i;
- }
-
- for (i = 0; i < 10; ++i) {
-	 printf("before c[%d] = %c\n", i, ctab[i]);
- }
-
- coth = (char *) ctab + 5;
-
- for (i = 0; i < 10; ++i) {
-	 printf("after c[%d] = %c\n", i, coth[i]);
- }
-
-
-
- ElementType a;
- ElementType b;
-
- a.i = 42;
- b.i = 51;
-
- printf("a > b %d\n", compare_int(&a, &b));
- printf("a > a %d\n", compare_int(&a, &a));
- printf("b > a %d\n", compare_int(&b, &a));
-
-  a.s = "abcdef";
-  b.s = "xyz";
-
-  printf("S a > b %d\n", compare_str(&a, &b));
-  printf("S a > a %d\n", compare_str(&a, &a));
-  printf("S b > a %d\n", compare_str(&b, &a));
-
-
- }
-
- */

@@ -37,18 +37,12 @@ CmpFunction *cmp_functionmap[] = {
 };
 
 
-/* Stack allocation threshold: arrays up to this size use alloca(),
-   larger arrays use malloc(). 4096 elements keeps us well within
-   typical stack limits while avoiding malloc overhead for small sorts. */
-#define STACK_ALLOC_THRESHOLD 4096
-
 SV* _jump_to_sort(const SortAlgo method, const SortType type, SV* array) {
 	AV* av;
 	AV* input;
 	SV* reply;
 	SV** svp;
 	ElementType *elements;
-	int needs_free = 0;
 
 	av = newAV();
 	reply = newRV_noinc((SV *) av);
@@ -65,15 +59,11 @@ SV* _jump_to_sort(const SortAlgo method, const SortType type, SV* array) {
 	int size = av_len(input);
 	int count = size + 1;
 
-	/* Use stack for small arrays, heap for large ones */
-	if (count <= STACK_ALLOC_THRESHOLD) {
-		Newx(elements, count, ElementType);
-	} else {
-		elements = (ElementType *)malloc(count * sizeof(ElementType));
-		if (!elements)
-			croak("Sort::XS: out of memory allocating %d elements", count);
-		needs_free = 1;
-	}
+	/* empty array — nothing to sort */
+	if (count <= 0)
+		return reply;
+
+	Newx(elements, count, ElementType);
 
 	/* Direct access to AV's internal SV** array — avoids per-element
 	   bounds checking and magic handling from av_fetch() */
@@ -104,10 +94,7 @@ SV* _jump_to_sort(const SortAlgo method, const SortType type, SV* array) {
 			av_push(av, newSVpv(elements[i].s, 0));
 	}
 
-	if (needs_free)
-		free(elements);
-	else
-		Safefree(elements);
+	Safefree(elements);
 
 	return reply;
 }
