@@ -2,7 +2,7 @@ package Sort::XS;
 use strict;
 use warnings;
 use base Exporter::;
-our @EXPORT = qw(xsort ixsort sxsort);
+our @EXPORT = qw(xsort ixsort sxsort qselect);
 
 our $VERSION = '0.30'; # VERSION
 require XSLoader;
@@ -84,6 +84,20 @@ sub ixsort {
 # shortcut to xsort with strings
 sub sxsort {
     xsort( @_, type => 'string' );
+}
+
+sub qselect {
+    my ($list, %args) = @_;
+    croak ERR_MSG_NOLIST unless ref $list eq ref [];
+    croak 'qselect: k parameter is required' unless defined $args{k};
+
+    my $k = $args{k};
+    my $type = $args{type} || 'integer';
+
+    if ($type eq 'string') {
+        return Sort::XS::quick_select_str($list, $k);
+    }
+    return Sort::XS::quick_select($list, $k);
 }
 
 sub _perl_sort {
@@ -312,6 +326,38 @@ XS subroutine to perform mergesort on array of strings.
 XS subroutine to perform insertionsort on array of strings.
 
     Sort::XS::insertion_sort_str( [ 'aa' .. 'zz' ] );
+
+=head2 qselect
+
+Find the kth smallest element in an array without fully sorting it.
+Uses the QuickSelect algorithm (O(n) average time), much faster than
+sorting when you only need one element (e.g., the median).
+
+    use Sort::XS qw(qselect);
+
+    my $min    = qselect([5, 3, 1, 4, 2], k => 1);    # 1
+    my $median = qselect([5, 3, 1, 4, 2], k => 3);    # 3
+    my $max    = qselect([5, 3, 1, 4, 2], k => 5);    # 5
+
+    # string selection
+    my $first = qselect(['kiwi', 'banana', 'apple'], k => 1, type => 'string');  # 'apple'
+
+Parameters: a reference to an array, C<k> (1-based position), and optionally
+C<type =E<gt> 'string'> for lexicographic comparison.
+
+Croaks if C<k> is out of range C<[1..N]>.
+
+=head2 quick_select
+
+XS subroutine for integer QuickSelect. Returns the kth smallest integer.
+
+    Sort::XS::quick_select([5, 3, 1, 4, 2], 3);  # 3
+
+=head2 quick_select_str
+
+XS subroutine for string QuickSelect. Returns the kth smallest string.
+
+    Sort::XS::quick_select_str(['cherry', 'apple', 'banana'], 2);  # 'banana'
 
 =head1 OPTIMIZATION
 
