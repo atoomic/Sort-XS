@@ -44,20 +44,22 @@ SV* _jump_to_sort(const SortAlgo method, const SortType type, SV* array) {
 	SV** svp;
 	ElementType *elements;
 
-	av = newAV();
-	reply = newRV_noinc((SV *) av);
-
-	/* not defined or not a reference */
-	if (!array || !SvOK(array) || !SvROK(array) )
-		return reply;
+	/* not defined or not a reference — return empty array */
+	if (!array || !SvOK(array) || !SvROK(array) ) {
+		av = newAV();
+		return newRV_noinc((SV *) av);
+	}
 
 	input = (AV*) SvRV(array);
-	/* should reference an array */
+	/* Validate type before allocating output — croak must not leak */
 	if (SvTYPE (input) != SVt_PVAV)
 		croak ("expecting a reference to an array");
 
 	int size = av_len(input);
 	int count = size + 1;
+
+	av = newAV();
+	reply = newRV_noinc((SV *) av);
 
 	/* empty array — nothing to sort */
 	if (count <= 0)

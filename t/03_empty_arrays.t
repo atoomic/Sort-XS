@@ -66,6 +66,15 @@ subtest 'undef and non-ref inputs' => sub {
     is_deeply(Sort::XS::quick_sort("not a ref"), [], "non-ref returns empty array");
 };
 
+subtest 'non-array reference croaks' => sub {
+    for my $algo (qw(insertion shell heap merge quick)) {
+        my $sorter = do { no strict 'refs'; \&{"Sort::XS::${algo}_sort"} };
+        eval { $sorter->({}) };
+        like($@, qr/expecting a reference to an array/,
+             "hashref croaks with $algo");
+    }
+};
+
 subtest 'xsort API with empty arrays' => sub {
     is_deeply(Sort::XS::xsort([]), [], "xsort on empty array");
     is_deeply(Sort::XS::ixsort([]), [], "ixsort on empty array");
