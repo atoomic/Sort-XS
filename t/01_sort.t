@@ -11,11 +11,11 @@ my @tests = (
     { type => 'integer', array => [ 8,  5,  1, 7 ] },
     { type => 'integer', array => [ 18, 11, 1, 151, 12 ] },
     { type => 'integer', array => [ 24 .. 42 ] },
-    { type => 'integer', array => [ 42 .. 24 ] },
+    { type => 'integer', array => [ reverse 24 .. 42 ] },
     { type => 'integer', array => [ 1 .. 100, 24 .. 42 ] },
 
     { type => 'str', array => [ 'kiwi', 'banana',    'apple', 'cherry' ] },
-    { type => 'str', array => [ 'z' .. 'a' ] },
+    { type => 'str', array => [ reverse 'a' .. 'z' ] },
     { type => 'str', array => [ 'a' .. 'z' ] },
     { type => 'str', array => [ 'cc' .. 'aa', 'bb' .. 'ba' ] },
 
