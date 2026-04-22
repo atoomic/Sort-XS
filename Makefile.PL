@@ -1,5 +1,4 @@
 use ExtUtils::MakeMaker;
-use Config;
 
 my %CFG = (
     'NAME'          => 'Sort::XS',
@@ -29,13 +28,5 @@ my %CFG = (
         resources => { license => 'http://dev.perl.org/licenses/', },
     }
 );
-
-if ($Config{"byteorder"} =~ /^1234/) {
-    $CFG{'DEFINE'} .= ' -DARCH_IS_BIG_ENDIAN=0';
-}
-
-if ($^O =~ /^MSWin/i) {
-    $CFG{'DEFINE'} .= ' -DWINDOWS';
-}
 
 WriteMakefile(%CFG);

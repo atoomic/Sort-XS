@@ -6,11 +6,11 @@ use Sort::XS;
 can_ok( 'Sort::XS', 'xsort' );
 
 my $tests = {
-    integer => [ [ 1, 5, 3 ], [ 1 .. 10, 2 .. 11 ], [ 10 .. 1 ], [ 1 .. 10 ] ],
+    integer => [ [ 1, 5, 3 ], [ 1 .. 10, 2 .. 11 ], [ reverse 1 .. 10 ], [ 1 .. 10 ] ],
     string => [
         [ 'kiwi',       'banana', 'apple', 'cherry' ],
         [ 'aa' .. 'ae', 'ac' .. 'am' ],
-        [ 'z' .. 'a' ],
+        [ reverse 'a' .. 'z' ],
         [ 'a' .. 'z' ]
     ]
 };

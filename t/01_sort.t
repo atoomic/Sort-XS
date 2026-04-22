@@ -17,7 +17,7 @@ my @tests = (
     { type => 'str', array => [ 'kiwi', 'banana',    'apple', 'cherry' ] },
     { type => 'str', array => [ 'z' .. 'a' ] },
     { type => 'str', array => [ 'a' .. 'z' ] },
-    { type => 'str', array => [ 'cc' .. 'aa', 'bb' .. 'ba' ] },
+    { type => 'str', array => [ reverse('aa' .. 'cc'), reverse('ba' .. 'bb') ] },
 
 );
 
