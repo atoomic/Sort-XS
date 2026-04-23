@@ -187,3 +187,73 @@ SV* void_sort(array)
 		RETVAL = _jump_to_sort(SORT_VOID, SORT_INT, array);
 	OUTPUT:
 		RETVAL
+
+SV* quick_select(array, k)
+	SV* array
+	int k
+	CODE:
+	{
+		AV* input;
+		SV** svp;
+		ElementType *elements;
+
+		if (!array || !SvOK(array) || !SvROK(array))
+			croak("quick_select: expecting a reference to an array");
+		input = (AV*) SvRV(array);
+		if (SvTYPE(input) != SVt_PVAV)
+			croak("quick_select: expecting a reference to an array");
+
+		int size = av_len(input);
+		int count = size + 1;
+
+		if (k < 1 || k > count)
+			croak("quick_select: k=%d out of range [1..%d]", k, count);
+
+		Newx(elements, count, ElementType);
+		svp = AvARRAY(input);
+		int i;
+		for (i = 0; i < count; ++i)
+			elements[i].i = SvIV(svp[i]);
+
+		Qselect(elements, k, 0, count - 1, compare_int);
+
+		RETVAL = newSViv(elements[k - 1].i);
+		Safefree(elements);
+	}
+	OUTPUT:
+		RETVAL
+
+SV* quick_select_str(array, k)
+	SV* array
+	int k
+	CODE:
+	{
+		AV* input;
+		SV** svp;
+		ElementType *elements;
+
+		if (!array || !SvOK(array) || !SvROK(array))
+			croak("quick_select_str: expecting a reference to an array");
+		input = (AV*) SvRV(array);
+		if (SvTYPE(input) != SVt_PVAV)
+			croak("quick_select_str: expecting a reference to an array");
+
+		int size = av_len(input);
+		int count = size + 1;
+
+		if (k < 1 || k > count)
+			croak("quick_select_str: k=%d out of range [1..%d]", k, count);
+
+		Newx(elements, count, ElementType);
+		svp = AvARRAY(input);
+		int i;
+		for (i = 0; i < count; ++i)
+			elements[i].s = SvPV_nolen(svp[i]);
+
+		Qselect(elements, k, 0, count - 1, compare_str);
+
+		RETVAL = newSVpv(elements[k - 1].s, 0);
+		Safefree(elements);
+	}
+	OUTPUT:
+		RETVAL

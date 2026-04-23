@@ -33,4 +33,7 @@ void QuickSort(ElementType A[], int N, CmpFunction *cmp);
 /* used to benchmark memory usage */
 void VoidSort(ElementType A[], int N, CmpFunction *cmp);
 
+/* Quick Select — places the kth smallest element at position k-1 */
+void Qselect(ElementType A[], int k, int Left, int Right, CmpFunction *cmp);
+
 #endif
