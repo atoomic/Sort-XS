@@ -187,11 +187,19 @@ It's still a better choice than the internal perl sort.
 
 read http://en.wikipedia.org/wiki/Mergesort for more informations
 
+=head2 shell sort
+
+Uses Ciura's empirically optimal gap sequence for better cache behavior
+than Shell's original N/2 sequence. A good general-purpose choice that
+outperforms insertion sort on medium arrays.
+
+read http://en.wikipedia.org/wiki/Shellsort for more informations
+
 =head2 insertion sort
 
 Provide one implementation of insertion sort, but prefer using either any of the previous algorithm or even the perl internal sort.
 
-read http://en.wikipedia.org/wiki/Mergesort for more informations
+read http://en.wikipedia.org/wiki/Insertion_sort for more informations
 
 =head2 perl
 
@@ -306,6 +314,19 @@ XS subroutine to perform heapsort on array of strings.
 XS subroutine to perform mergesort on array of strings.
 
     Sort::XS::merge_sort_str( [ 'aa' .. 'zz' ] );
+
+=head2 shell_sort
+
+XS subroutine to perform shellsort on array of integers.
+
+    my $list = [1, 6, 4, 2, 3, 5 ]
+    Sort::XS::shell_sort($list);
+
+=head2 shell_sort_str
+
+XS subroutine to perform shellsort on array of strings.
+
+    Sort::XS::shell_sort_str( [ 'aa' .. 'zz' ] );
 
 =head2 insertion_sort_str
 
