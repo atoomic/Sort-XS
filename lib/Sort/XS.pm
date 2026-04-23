@@ -66,7 +66,7 @@ sub xsort {
         my $void;
         ( $void, %args ) = @_;
     }
-    map { $params{$_} = $args{$_} || $params{$_}; } qw/algorithm type/;
+    map { $params{$_} = $args{$_} // $params{$_}; } qw/algorithm type/;
 
     my $type =
       ( defined $params{type} && $params{type} eq 'string' ) ? '_str' : '';
