@@ -162,7 +162,7 @@ void MSort(ElementType A[], ElementType TmpArray[], int Left, int Right, CmpFunc
 	int Center;
 
 	if (Left < Right) {
-		Center = (Left + Right) / 2;
+		Center = Left + (Right - Left) / 2;
 		MSort(A, TmpArray, Left, Center, cmp);
 		MSort(A, TmpArray, Center + 1, Right, cmp);
 		Merge(A, TmpArray, Left, Center + 1, Right, cmp);
@@ -182,7 +182,7 @@ void MergeSort(ElementType A[], int N, CmpFunction *cmp) {
 /* Order these and hide the pivot */
 
 ElementType Median3(ElementType A[], int Left, int Right, CmpFunction *cmp) {
-	int Center = (Left + Right) / 2;
+	int Center = Left + (Right - Left) / 2;
 
 	if ((*cmp)(&A[Left], &A[Center]) > 0)
 		Swap(&A[Left], &A[Center]);
