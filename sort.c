@@ -111,9 +111,9 @@ void PercDown(ElementType A[], int i, int N, CmpFunction *cmp) {
 }
 
 void VoidSort(ElementType A[], int N, CmpFunction *cmp) {
+	PERL_UNUSED_ARG(cmp);
 	if (N > 0) {
-		ElementType i;
-		i = A[0];
+		(void)A[0];
 	}
 }
 
