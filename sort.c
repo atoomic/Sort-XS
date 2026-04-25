@@ -244,11 +244,13 @@ void QuickSort(ElementType A[], int N, CmpFunction *cmp) {
 
 /* Places the kth smallest element in the kth position */
 /* Because arrays start at 0, this will be index k-1 */
+/* Iterative: since Qselect only recurses into one partition,
+   it converts directly to a loop — no stack growth at all. */
 void Qselect(ElementType A[], int k, int Left, int Right, CmpFunction *cmp) {
 	int i, j;
 	ElementType Pivot;
 
-	if (Left + Cutoff <= Right) {
+	while (Left + Cutoff <= Right) {
 		Pivot = Median3(A, Left, Right, cmp);
 		i = Left;
 		j = Right - 1;
@@ -263,10 +265,13 @@ void Qselect(ElementType A[], int k, int Left, int Right, CmpFunction *cmp) {
 		Swap(&A[i], &A[Right - 1]); /* Restore pivot */
 
 		if (k <= i)
-			Qselect(A, k, Left, i - 1, cmp);
+			Right = i - 1;
 		else if (k > i + 1)
-			Qselect(A, k, i + 1, Right, cmp);
-	} else
-		InsertionSort(A + Left, Right - Left + 1, cmp);
+			Left = i + 1;
+		else
+			return; /* pivot is the answer */
+	}
+
+	InsertionSort(A + Left, Right - Left + 1, cmp);
 }
 
