@@ -12,7 +12,11 @@ SORT_INLINE int compare_int(const ElementType *a, const ElementType *b) {
 }
 
 SORT_INLINE int compare_str(const ElementType *a, const ElementType *b) {
-	return strcmp(a->s, b->s);
+	STRLEN min_len = a->s.len < b->s.len ? a->s.len : b->s.len;
+	int cmp = memcmp(a->s.ptr, b->s.ptr, min_len);
+	if (cmp != 0) return cmp;
+	/* Equal prefix — shorter string sorts first */
+	return (a->s.len > b->s.len) - (a->s.len < b->s.len);
 }
 
 /*

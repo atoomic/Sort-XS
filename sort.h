@@ -11,10 +11,15 @@
 #endif
 
 /* typedef used */
+typedef struct {
+	char  *ptr;
+	STRLEN len;
+} StrElement;
+
 typedef union {
-	double f;
-        IV     i;
-	char  *s;
+	double     f;
+	IV         i;
+	StrElement s;
 } ElementType;
 
 typedef int (CmpFunction)(const ElementType *a, const ElementType *b);
