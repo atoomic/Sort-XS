@@ -158,22 +158,31 @@ void Merge(ElementType A[], ElementType TmpArray[], int Lpos, int Rpos,
 	memcpy(&A[StartPos], &TmpArray[StartPos], NumElements * sizeof(ElementType));
 }
 
-void MSort(ElementType A[], ElementType TmpArray[], int Left, int Right, CmpFunction *cmp) {
-	int Center;
-
-	if (Left < Right) {
-		Center = Left + (Right - Left) / 2;
-		MSort(A, TmpArray, Left, Center, cmp);
-		MSort(A, TmpArray, Center + 1, Right, cmp);
-		Merge(A, TmpArray, Left, Center + 1, Right, cmp);
-	}
-}
+/* Bottom-up iterative MergeSort.
+   Merges runs of doubling width (1, 2, 4, 8, ...) until the whole
+   array is sorted.  No recursion — O(1) stack depth, and the linear
+   left-to-right sweep at each level is cache-friendly. */
 
 void MergeSort(ElementType A[], int N, CmpFunction *cmp) {
 	ElementType *TmpArray;
+	int width, i;
+	int Left, Mid, Right;
+
+	if (N <= 1) return;
 
 	Newx(TmpArray, N, ElementType);
-	MSort(A, TmpArray, 0, N - 1, cmp);
+
+	for (width = 1; width < N; width *= 2) {
+		for (i = 0; i < N; i += 2 * width) {
+			Left = i;
+			Mid  = i + width;
+			if (Mid >= N) break;  /* only one run left, already in place */
+			Right = i + 2 * width - 1;
+			if (Right >= N) Right = N - 1;
+			Merge(A, TmpArray, Left, Mid, Right, cmp);
+		}
+	}
+
 	Safefree(TmpArray);
 }
 
