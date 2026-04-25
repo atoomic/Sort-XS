@@ -1,7 +1,39 @@
 {{$NEXT}}
+    [New Features]
+    - Add ShellSort algorithm using Ciura's empirically optimal gap sequence
+    - Add QuickSelect via qselect() API — find kth smallest element in O(n) average
+    - Add string variant quick_select_str() for lexicographic selection
+
+    [Bug Fixes]
+    - Fix undefined behavior on empty arrays (HeapSort read out of bounds, Newx(0))
+    - Fix memory leak on croak() — validate inputs before allocating output SVs
+    - Fix integer overflow in midpoint calculation: use Left+(Right-Left)/2
+    - Fix silent fallback bug in xsort(): use // instead of || for parameter merging
+    - Fix MergeSort to use Newx/Safefree instead of raw malloc/free
+    - Remove dead compiler defines (ARCH_IS_BIG_ENDIAN, WINDOWS) from build config
+    - Remove spurious FindBin dependency from cpanfile
+    - Fix broken reverse-range test cases (Perl's [42..24] is empty, not reversed)
+
+    [Performance]
+    - QuickSort: raise insertion sort cutoff from 3 to 16, add tail-call optimization
+    - HeapSort: Floyd's bottom-up sift reduces comparisons by ~50%
+    - ShellSort: Ciura's gap sequence replaces Shell's original N/2 sequence
+    - Data marshalling: use AvARRAY() direct access, av_extend() pre-allocation
+    - Integer comparison: branchless (a>b)-(a<b) replaces ternary
+    - MergeSort copy-back: memcpy replaces per-element loop
+
+    [Testing]
+    - Add comprehensive adversarial sort test suite (pre-sorted, reverse, all-equal,
+      pipe-organ, sawtooth, Dutch flag, extreme IV values, size boundaries)
+    - Add empty array edge case tests
+    - Add corner case tests with IV_MIN/IV_MAX values
+
+    [Distribution]
     - Switch to Dist::Zilla for distribution management
     - Generate README.md from POD
     - Version from git tags via Git::NextVersion
+    - Add CLAUDE.md project development guide
+    - Add GitHub Actions CI (Linux multi-Perl, macOS, Windows)
 
 0.3
     - use IV type for integer keys and a proper comparison funtion that doesn't overflows
