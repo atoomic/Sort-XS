@@ -270,3 +270,23 @@ void Qselect(ElementType A[], int k, int Left, int Right, CmpFunction *cmp) {
 		InsertionSort(A + Left, Right - Left + 1, cmp);
 }
 
+/* Partial Sort: places the k smallest elements in sorted order at A[0..k-1].
+   Strategy: partition around position k via Qselect, then sort A[0..k-1].
+   Complexity: O(n + k log k) — much faster than full O(n log n) sort when k << n. */
+void PartialSort(ElementType A[], int N, int k, CmpFunction *cmp) {
+	if (k <= 0 || N <= 0)
+		return;
+	if (k >= N) {
+		/* k covers the whole array — just do a full sort */
+		QuickSort(A, N, cmp);
+		return;
+	}
+
+	/* Partition so that A[k-1] holds the kth smallest element,
+	   and all elements in A[0..k-1] are <= A[k-1] (unordered) */
+	Qselect(A, k, 0, N - 1, cmp);
+
+	/* Now sort just the first k elements */
+	QuickSort(A, k, cmp);
+}
+

@@ -36,4 +36,8 @@ void VoidSort(ElementType A[], int N, CmpFunction *cmp);
 /* Quick Select — places the kth smallest element at position k-1 */
 void Qselect(ElementType A[], int k, int Left, int Right, CmpFunction *cmp);
 
+/* Partial Sort — places the k smallest elements in sorted order at positions 0..k-1.
+   O(n + k log k): partition via Qselect, then sort the first k elements. */
+void PartialSort(ElementType A[], int N, int k, CmpFunction *cmp);
+
 #endif

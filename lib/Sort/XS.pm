@@ -2,7 +2,7 @@ package Sort::XS;
 use strict;
 use warnings;
 use base Exporter::;
-our @EXPORT = qw(xsort ixsort sxsort qselect);
+our @EXPORT = qw(xsort ixsort sxsort qselect partial_sort);
 
 our $VERSION = '0.30'; # VERSION
 require XSLoader;
@@ -98,6 +98,20 @@ sub qselect {
         return Sort::XS::quick_select_str($list, $k);
     }
     return Sort::XS::quick_select($list, $k);
+}
+
+sub partial_sort {
+    my ($list, %args) = @_;
+    croak ERR_MSG_NOLIST unless ref $list eq ref [];
+    croak 'partial_sort: k parameter is required' unless defined $args{k};
+
+    my $k = $args{k};
+    my $type = $args{type} // 'integer';
+
+    if ($type eq 'string') {
+        return Sort::XS::_partial_sort_str($list, $k);
+    }
+    return Sort::XS::_partial_sort($list, $k);
 }
 
 sub _perl_sort {
@@ -379,6 +393,25 @@ XS subroutine for integer QuickSelect. Returns the kth smallest integer.
 XS subroutine for string QuickSelect. Returns the kth smallest string.
 
     Sort::XS::quick_select_str(['cherry', 'apple', 'banana'], 2);  # 'banana'
+
+=head2 partial_sort
+
+Return the k smallest elements in sorted order, without fully sorting the array.
+Uses QuickSelect to partition (O(n)), then sorts only the first k elements (O(k log k)).
+Total complexity: O(n + k log k) — much faster than full sort when k << n.
+
+    use Sort::XS qw(partial_sort);
+
+    my $top3 = partial_sort([9, 1, 5, 3, 7, 2, 8, 4, 6], k => 3);
+    # [1, 2, 3]
+
+    my $top2 = partial_sort(['kiwi', 'banana', 'apple', 'cherry'], k => 2, type => 'string');
+    # ['apple', 'banana']
+
+Parameters: a reference to an array, C<k> (number of elements to return, 1-based),
+and optionally C<type =E<gt> 'string'> for lexicographic comparison.
+
+Croaks if C<k> is out of range C<[1..N]>.
 
 =head1 OPTIMIZATION
 
