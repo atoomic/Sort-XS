@@ -256,6 +256,50 @@ subtest 'string: large random' => sub {
     }
 };
 
+# ── Strings with embedded null bytes ────────────────────────────────────
+
+subtest 'string: embedded null bytes' => sub {
+    # Strings containing \0 must sort correctly and preserve full content.
+    # strcmp/newSVpv would truncate at the first null byte — this tests
+    # that we use length-aware comparison (memcmp) and output (newSVpvn).
+
+    my @data = ("a\0c", "a\0b", "a\0a");
+    my $expected = str_ref(\@data);
+    for my $algo (@str_algorithms) {
+        my $result = get_sorter($algo, 'str')->(\@data);
+        is_deeply($result, $expected, "$algo: embedded nulls sort correctly");
+        # Verify no truncation: output strings must have same length as input
+        is(length($result->[0]), 3, "$algo: null-byte string not truncated");
+    }
+};
+
+subtest 'string: null byte as discriminator' => sub {
+    # Two strings identical before the null, different after it
+    my @data = ("prefix\0zzz", "prefix\0aaa", "prefix\0mmm");
+    my $expected = str_ref(\@data);
+    for my $algo (@str_algorithms) {
+        is_deeply(get_sorter($algo, 'str')->(\@data), $expected,
+            "$algo: null byte as discriminator");
+    }
+};
+
+subtest 'string: null byte prefix sorting' => sub {
+    # "abc" should sort before "abc\0x" (shorter string first)
+    my @data = ("abc\0x", "abc", "abc\0");
+    my $expected = str_ref(\@data);
+    for my $algo (@str_algorithms) {
+        is_deeply(get_sorter($algo, 'str')->(\@data), $expected,
+            "$algo: prefix vs null-extended");
+    }
+};
+
+subtest 'qselect_str with null bytes' => sub {
+    my @data = ("b\0z", "a\0z", "c\0z");
+    my $result = Sort::XS::quick_select_str(\@data, 1);
+    is($result, "a\0z", "qselect_str: min with null bytes");
+    is(length($result), 3, "qselect_str: result not truncated");
+};
+
 # ── MergeSort stability ──────────────────────────────────────────────────
 
 subtest 'mergesort stability' => sub {

@@ -77,8 +77,11 @@ SV* _jump_to_sort(const SortAlgo method, const SortType type, SV* array) {
 		for ( i = 0; i < count; ++i)
 			elements[i].i = SvIV(svp[i]);
 	} else {
-		for ( i = 0; i < count; ++i)
-			elements[i].s = SvPV_nolen(svp[i]);
+		for ( i = 0; i < count; ++i) {
+			STRLEN len;
+			elements[i].s.ptr = SvPV(svp[i], len);
+			elements[i].s.len = len;
+		}
 	}
 
 	/* map to the c method */
@@ -93,7 +96,7 @@ SV* _jump_to_sort(const SortAlgo method, const SortType type, SV* array) {
 			av_push(av, newSViv(elements[i].i));
 	} else {
 		for ( i = 0; i < count; ++i)
-			av_push(av, newSVpv(elements[i].s, 0));
+			av_push(av, newSVpvn(elements[i].s.ptr, elements[i].s.len));
 	}
 
 	Safefree(elements);
@@ -247,12 +250,15 @@ SV* quick_select_str(array, k)
 		Newx(elements, count, ElementType);
 		svp = AvARRAY(input);
 		int i;
-		for (i = 0; i < count; ++i)
-			elements[i].s = SvPV_nolen(svp[i]);
+		for (i = 0; i < count; ++i) {
+			STRLEN len;
+			elements[i].s.ptr = SvPV(svp[i], len);
+			elements[i].s.len = len;
+		}
 
 		Qselect(elements, k, 0, count - 1, compare_str);
 
-		RETVAL = newSVpv(elements[k - 1].s, 0);
+		RETVAL = newSVpvn(elements[k - 1].s.ptr, elements[k - 1].s.len);
 		Safefree(elements);
 	}
 	OUTPUT:
