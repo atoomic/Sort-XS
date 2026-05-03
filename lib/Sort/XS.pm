@@ -133,7 +133,7 @@ Sort::XS - a ( very ) fast XS sort alternative for one dimension list
   my $sorted = xsort( $list ) or ixsort( $list )
             or xsort( list => $list )
             or xsort( list => $list, algorithm => 'quick' )
-            or xsort( $list, algorithm => 'quick', type => integer )
+            or xsort( $list, algorithm => 'quick', type => 'integer' )
             or xsort( list => $list, algorithm => 'heap', type => 'integer' ) 
             or xsort( list => $list, algorithm => 'merge', type => 'string' );
    
@@ -147,9 +147,9 @@ Sort::XS - a ( very ) fast XS sort alternative for one dimension list
     # sorting array of strings
     $list = [ 'kiwi', 'banana', 'apple', 'cherry' ];
     $sorted = sxsort( $list )
-        or sxsort( [ $list ], algorithm => 'quick' )
-        or sxsort( [ $list ], algorithm => 'heap' )
-        or sxsort( [ $list ], algorithm => 'merge' );
+        or sxsort( $list, algorithm => 'quick' )
+        or sxsort( $list, algorithm => 'heap' )
+        or sxsort( $list, algorithm => 'merge' );
     
     # use direct XS subroutines to sort array of strings 
     $sorted = Sort::XS::quick_sort_str( $list )
@@ -539,7 +539,7 @@ Nicolas R., E<lt>me@eboxr.comE<gt>
 
 =head1 CONTRIBUTORS
 
-Salvador Fandi�o
+Salvador FandiE<ntilde>o
 
 =head1 SEE ALSO
 

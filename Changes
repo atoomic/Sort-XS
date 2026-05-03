@@ -2,6 +2,20 @@
     - Switch to Dist::Zilla for distribution management
     - Generate README.md from POD
     - Version from git tags via Git::NextVersion
+    - Add ShellSort algorithm with Ciura's empirically optimal gap sequence
+    - Add QuickSelect (qselect) for O(n) kth-element queries
+    - Fix undefined behavior on empty arrays (HeapSort, _jump_to_sort)
+    - Fix memory leak on croak and integer overflow in midpoint calculation
+    - Replace raw malloc with Newx in MergeSort for proper OOM handling
+    - Optimize HeapSort with Floyd's bottom-up sift (fewer comparisons)
+    - Optimize QuickSort with tail-call elimination (O(log n) stack depth)
+    - Pre-extend output AV and use AvARRAY for faster marshalling
+    - Use branchless integer comparison
+    - Fix silent fallback bug in xsort() where falsy-but-defined values
+      were replaced by defaults (|| changed to //)
+    - Rename enum values to avoid conflicts with Windows macros (winnt.h)
+    - Replace Travis CI with GitHub Actions (Linux multi-version + macOS + Windows)
+    - Fix POD: correct sxsort synopsis examples and contributor name encoding
 
 0.3
     - use IV type for integer keys and a proper comparison funtion that doesn't overflows
