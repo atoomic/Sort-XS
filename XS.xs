@@ -58,14 +58,18 @@ SV* _jump_to_sort(const SortAlgo method, const SortType type, SV* array) {
 	int size = av_len(input);
 	int count = size + 1;
 
+	/* empty array — nothing to sort */
+	if (count <= 0) {
+		av = newAV();
+		return newRV_noinc((SV *) av);
+	}
+
+	/* Allocate C array before output SVs — Newx may croak on OOM,
+	   and croak's longjmp would leak any SVs allocated before it. */
+	Newx(elements, count, ElementType);
+
 	av = newAV();
 	reply = newRV_noinc((SV *) av);
-
-	/* empty array — nothing to sort */
-	if (count <= 0)
-		return reply;
-
-	Newx(elements, count, ElementType);
 
 	/* Direct access to AV's internal SV** array — avoids per-element
 	   bounds checking and magic handling from av_fetch() */
