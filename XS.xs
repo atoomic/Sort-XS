@@ -257,3 +257,85 @@ SV* quick_select_str(array, k)
 	}
 	OUTPUT:
 		RETVAL
+
+SV* _partial_sort(array, k)
+	SV* array
+	int k
+	CODE:
+	{
+		AV* av;
+		AV* input;
+		SV** svp;
+		ElementType *elements;
+
+		if (!array || !SvOK(array) || !SvROK(array))
+			croak("partial_sort: expecting a reference to an array");
+		input = (AV*) SvRV(array);
+		if (SvTYPE(input) != SVt_PVAV)
+			croak("partial_sort: expecting a reference to an array");
+
+		int size = av_len(input);
+		int count = size + 1;
+
+		if (k < 1 || k > count)
+			croak("partial_sort: k=%d out of range [1..%d]", k, count);
+
+		Newx(elements, count, ElementType);
+		svp = AvARRAY(input);
+		int i;
+		for (i = 0; i < count; ++i)
+			elements[i].i = SvIV(svp[i]);
+
+		PartialSort(elements, count, k, compare_int);
+
+		av = newAV();
+		av_extend(av, k - 1);
+		for (i = 0; i < k; ++i)
+			av_push(av, newSViv(elements[i].i));
+
+		Safefree(elements);
+		RETVAL = newRV_noinc((SV *) av);
+	}
+	OUTPUT:
+		RETVAL
+
+SV* _partial_sort_str(array, k)
+	SV* array
+	int k
+	CODE:
+	{
+		AV* av;
+		AV* input;
+		SV** svp;
+		ElementType *elements;
+
+		if (!array || !SvOK(array) || !SvROK(array))
+			croak("partial_sort_str: expecting a reference to an array");
+		input = (AV*) SvRV(array);
+		if (SvTYPE(input) != SVt_PVAV)
+			croak("partial_sort_str: expecting a reference to an array");
+
+		int size = av_len(input);
+		int count = size + 1;
+
+		if (k < 1 || k > count)
+			croak("partial_sort_str: k=%d out of range [1..%d]", k, count);
+
+		Newx(elements, count, ElementType);
+		svp = AvARRAY(input);
+		int i;
+		for (i = 0; i < count; ++i)
+			elements[i].s = SvPV_nolen(svp[i]);
+
+		PartialSort(elements, count, k, compare_str);
+
+		av = newAV();
+		av_extend(av, k - 1);
+		for (i = 0; i < k; ++i)
+			av_push(av, newSVpv(elements[i].s, 0));
+
+		Safefree(elements);
+		RETVAL = newRV_noinc((SV *) av);
+	}
+	OUTPUT:
+		RETVAL
