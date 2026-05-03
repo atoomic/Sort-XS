@@ -203,13 +203,29 @@ ElementType Median3(ElementType A[], int Left, int Right, CmpFunction *cmp) {
    and exploit cache-line-sized working sets. */
 #define Cutoff ( 16 )
 
-void Qsort(ElementType A[], int Left, int Right, CmpFunction *cmp) {
+/* Integer floor(log2(n)) for depth limit computation */
+static int ilog2(int n) {
+	int log = 0;
+	while (n > 1) {
+		n >>= 1;
+		log++;
+	}
+	return log;
+}
+
+void Qsort(ElementType A[], int Left, int Right, int depth_limit, CmpFunction *cmp) {
 	int i, j;
 	ElementType Pivot;
 
 	/* Tail-call optimization: loop on the larger partition,
 	   recurse on the smaller one. Guarantees O(log n) stack depth. */
 	while (Left + Cutoff <= Right) {
+		/* Introsort: switch to HeapSort when recursion is too deep */
+		if (depth_limit == 0) {
+			HeapSort(A + Left, Right - Left + 1, cmp);
+			return;
+		}
+
 		Pivot = Median3(A, Left, Right, cmp);
 		i = Left;
 		j = Right - 1;
@@ -224,11 +240,12 @@ void Qsort(ElementType A[], int Left, int Right, CmpFunction *cmp) {
 		Swap(&A[i], &A[Right - 1]); /* Restore pivot */
 
 		/* Recurse on smaller partition, loop on larger */
+		depth_limit--;
 		if (i - Left < Right - i) {
-			Qsort(A, Left, i - 1, cmp);
+			Qsort(A, Left, i - 1, depth_limit, cmp);
 			Left = i + 1;
 		} else {
-			Qsort(A, i + 1, Right, cmp);
+			Qsort(A, i + 1, Right, depth_limit, cmp);
 			Right = i - 1;
 		}
 	}
@@ -239,7 +256,8 @@ void Qsort(ElementType A[], int Left, int Right, CmpFunction *cmp) {
 }
 
 void QuickSort(ElementType A[], int N, CmpFunction *cmp) {
-	Qsort(A, 0, N - 1, cmp);
+	int depth_limit = 2 * ilog2(N);
+	Qsort(A, 0, N - 1, depth_limit, cmp);
 }
 
 /* Places the kth smallest element in the kth position */
