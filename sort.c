@@ -27,8 +27,8 @@ SORT_INLINE void Swap(ElementType *Lhs, ElementType *Rhs) {
 	*Rhs = Tmp;
 }
 
-void InsertionSort(ElementType A[], int N, CmpFunction *cmp) {
-	int j, P;
+void InsertionSort(ElementType A[], SSize_t N, CmpFunction *cmp) {
+	SSize_t j, P;
 	ElementType Tmp;
 
 	for (P = 1; P < N; P++) {
@@ -39,13 +39,14 @@ void InsertionSort(ElementType A[], int N, CmpFunction *cmp) {
 	}
 }
 
-void ShellSort(ElementType A[], int N, CmpFunction *cmp) {
-	int i, j, Increment, gi;
+void ShellSort(ElementType A[], SSize_t N, CmpFunction *cmp) {
+	SSize_t i, j, Increment;
+	int gi;
 	ElementType Tmp;
 
 	/* Ciura's gap sequence — empirically optimal for modern CPUs.
 	   Extended beyond 701 by multiplying by 2.25 (Ciura's suggested ratio). */
-	static const int ciura_gaps[] = {
+	static const SSize_t ciura_gaps[] = {
 		1, 4, 10, 23, 57, 132, 301, 701,
 		1577, 3548, 7983, 17961, 40412, 90927, 204585, 460316
 	};
@@ -78,10 +79,10 @@ void ShellSort(ElementType A[], int N, CmpFunction *cmp) {
 
 #define LeftChild( i )  ( 2 * ( i ) + 1 )
 
-void PercDown(ElementType A[], int i, int N, CmpFunction *cmp) {
-	int Child;
+void PercDown(ElementType A[], SSize_t i, SSize_t N, CmpFunction *cmp) {
+	SSize_t Child;
 	ElementType Tmp = A[i];
-	int hole = i;
+	SSize_t hole = i;
 
 	/* Phase 1: sift the hole down to a leaf, always following the larger child.
 	   Only 1 comparison per level (child vs child). */
@@ -100,7 +101,7 @@ void PercDown(ElementType A[], int i, int N, CmpFunction *cmp) {
 	/* Phase 2: bubble the saved element back up from the leaf.
 	   Usually only 0-2 levels since most elements belong near the bottom. */
 	while (hole > i) {
-		int parent = (hole - 1) / 2;
+		SSize_t parent = (hole - 1) / 2;
 		if ((*cmp)(&Tmp, &A[parent]) > 0) {
 			A[hole] = A[parent];
 			hole = parent;
@@ -110,15 +111,15 @@ void PercDown(ElementType A[], int i, int N, CmpFunction *cmp) {
 	A[hole] = Tmp;
 }
 
-void VoidSort(ElementType A[], int N, CmpFunction *cmp) {
+void VoidSort(ElementType A[], SSize_t N, CmpFunction *cmp) {
 	if (N > 0) {
 		ElementType i;
 		i = A[0];
 	}
 }
 
-void HeapSort(ElementType A[], int N, CmpFunction *cmp) {
-	int i;
+void HeapSort(ElementType A[], SSize_t N, CmpFunction *cmp) {
+	SSize_t i;
 
 	if (N <= 1) return;
 
@@ -132,10 +133,10 @@ void HeapSort(ElementType A[], int N, CmpFunction *cmp) {
 
 /* Merge */
 
-void Merge(ElementType A[], ElementType TmpArray[], int Lpos, int Rpos,
-		int RightEnd, CmpFunction *cmp) {
-	int LeftEnd, NumElements, TmpPos;
-	int StartPos = Lpos;
+void Merge(ElementType A[], ElementType TmpArray[], SSize_t Lpos, SSize_t Rpos,
+		SSize_t RightEnd, CmpFunction *cmp) {
+	SSize_t LeftEnd, NumElements, TmpPos;
+	SSize_t StartPos = Lpos;
 
 	LeftEnd = Rpos - 1;
 	TmpPos = Lpos;
@@ -158,8 +159,8 @@ void Merge(ElementType A[], ElementType TmpArray[], int Lpos, int Rpos,
 	memcpy(&A[StartPos], &TmpArray[StartPos], NumElements * sizeof(ElementType));
 }
 
-void MSort(ElementType A[], ElementType TmpArray[], int Left, int Right, CmpFunction *cmp) {
-	int Center;
+void MSort(ElementType A[], ElementType TmpArray[], SSize_t Left, SSize_t Right, CmpFunction *cmp) {
+	SSize_t Center;
 
 	if (Left < Right) {
 		Center = Left + (Right - Left) / 2;
@@ -169,7 +170,7 @@ void MSort(ElementType A[], ElementType TmpArray[], int Left, int Right, CmpFunc
 	}
 }
 
-void MergeSort(ElementType A[], int N, CmpFunction *cmp) {
+void MergeSort(ElementType A[], SSize_t N, CmpFunction *cmp) {
 	ElementType *TmpArray;
 
 	Newx(TmpArray, N, ElementType);
@@ -181,8 +182,8 @@ void MergeSort(ElementType A[], int N, CmpFunction *cmp) {
 /* Return median of Left, Center, and Right */
 /* Order these and hide the pivot */
 
-ElementType Median3(ElementType A[], int Left, int Right, CmpFunction *cmp) {
-	int Center = Left + (Right - Left) / 2;
+ElementType Median3(ElementType A[], SSize_t Left, SSize_t Right, CmpFunction *cmp) {
+	SSize_t Center = Left + (Right - Left) / 2;
 
 	if ((*cmp)(&A[Left], &A[Center]) > 0)
 		Swap(&A[Left], &A[Center]);
@@ -203,8 +204,8 @@ ElementType Median3(ElementType A[], int Left, int Right, CmpFunction *cmp) {
    and exploit cache-line-sized working sets. */
 #define Cutoff ( 16 )
 
-void Qsort(ElementType A[], int Left, int Right, CmpFunction *cmp) {
-	int i, j;
+void Qsort(ElementType A[], SSize_t Left, SSize_t Right, CmpFunction *cmp) {
+	SSize_t i, j;
 	ElementType Pivot;
 
 	/* Tail-call optimization: loop on the larger partition,
@@ -238,14 +239,14 @@ void Qsort(ElementType A[], int Left, int Right, CmpFunction *cmp) {
 		InsertionSort(A + Left, Right - Left + 1, cmp);
 }
 
-void QuickSort(ElementType A[], int N, CmpFunction *cmp) {
+void QuickSort(ElementType A[], SSize_t N, CmpFunction *cmp) {
 	Qsort(A, 0, N - 1, cmp);
 }
 
 /* Places the kth smallest element in the kth position */
 /* Because arrays start at 0, this will be index k-1 */
-void Qselect(ElementType A[], int k, int Left, int Right, CmpFunction *cmp) {
-	int i, j;
+void Qselect(ElementType A[], SSize_t k, SSize_t Left, SSize_t Right, CmpFunction *cmp) {
+	SSize_t i, j;
 	ElementType Pivot;
 
 	if (Left + Cutoff <= Right) {
