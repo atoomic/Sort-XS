@@ -14,7 +14,7 @@
 #include "sort.h"
 #include <string.h>
 
-typedef void (*sort_function_t)(ElementType A[ ], int N, CmpFunction *cmp);
+typedef void (*sort_function_t)(ElementType A[ ], SSize_t N, CmpFunction *cmp);
 
 /* The enum and map are in the same order for easy lookup */
 /* Prefixed to avoid conflicts with Windows macros (VOID, INT) from winnt.h */
@@ -55,8 +55,8 @@ SV* _jump_to_sort(const SortAlgo method, const SortType type, SV* array) {
 	if (SvTYPE (input) != SVt_PVAV)
 		croak ("expecting a reference to an array");
 
-	int size = av_len(input);
-	int count = size + 1;
+	SSize_t size = av_len(input);
+	SSize_t count = size + 1;
 
 	av = newAV();
 	reply = newRV_noinc((SV *) av);
@@ -71,7 +71,7 @@ SV* _jump_to_sort(const SortAlgo method, const SortType type, SV* array) {
 	   bounds checking and magic handling from av_fetch() */
 	svp = AvARRAY(input);
 
-	int i;
+	SSize_t i;
 	/* Hoisted type check: separate loops eliminate per-element branch */
 	if ( type == SORT_INT ) {
 		for ( i = 0; i < count; ++i)
@@ -203,19 +203,19 @@ SV* quick_select(array, k)
 		if (SvTYPE(input) != SVt_PVAV)
 			croak("quick_select: expecting a reference to an array");
 
-		int size = av_len(input);
-		int count = size + 1;
+		SSize_t size = av_len(input);
+		SSize_t count = size + 1;
 
 		if (k < 1 || k > count)
-			croak("quick_select: k=%d out of range [1..%d]", k, count);
+			croak("quick_select: k=%d out of range [1..%" IVdf "]", k, (IV)count);
 
 		Newx(elements, count, ElementType);
 		svp = AvARRAY(input);
-		int i;
+		SSize_t i;
 		for (i = 0; i < count; ++i)
 			elements[i].i = SvIV(svp[i]);
 
-		Qselect(elements, k, 0, count - 1, compare_int);
+		Qselect(elements, (SSize_t)k, 0, count - 1, compare_int);
 
 		RETVAL = newSViv(elements[k - 1].i);
 		Safefree(elements);
@@ -238,19 +238,19 @@ SV* quick_select_str(array, k)
 		if (SvTYPE(input) != SVt_PVAV)
 			croak("quick_select_str: expecting a reference to an array");
 
-		int size = av_len(input);
-		int count = size + 1;
+		SSize_t size = av_len(input);
+		SSize_t count = size + 1;
 
 		if (k < 1 || k > count)
-			croak("quick_select_str: k=%d out of range [1..%d]", k, count);
+			croak("quick_select_str: k=%d out of range [1..%" IVdf "]", k, (IV)count);
 
 		Newx(elements, count, ElementType);
 		svp = AvARRAY(input);
-		int i;
+		SSize_t i;
 		for (i = 0; i < count; ++i)
 			elements[i].s = SvPV_nolen(svp[i]);
 
-		Qselect(elements, k, 0, count - 1, compare_str);
+		Qselect(elements, (SSize_t)k, 0, count - 1, compare_str);
 
 		RETVAL = newSVpv(elements[k - 1].s, 0);
 		Safefree(elements);

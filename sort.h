@@ -24,16 +24,16 @@ typedef int (CmpFunction)(const ElementType *a, const ElementType *b);
 int compare_int(const ElementType *a, const ElementType *b);
 int compare_str(const ElementType *a, const ElementType *b);
 
-void InsertionSort(ElementType A[], int N, CmpFunction *cmp);
-void ShellSort(ElementType A[], int N, CmpFunction *cmp);
-void HeapSort(ElementType A[], int N, CmpFunction *cmp);
-void MergeSort(ElementType A[], int N, CmpFunction *cmp);
-void QuickSort(ElementType A[], int N, CmpFunction *cmp);
+void InsertionSort(ElementType A[], SSize_t N, CmpFunction *cmp);
+void ShellSort(ElementType A[], SSize_t N, CmpFunction *cmp);
+void HeapSort(ElementType A[], SSize_t N, CmpFunction *cmp);
+void MergeSort(ElementType A[], SSize_t N, CmpFunction *cmp);
+void QuickSort(ElementType A[], SSize_t N, CmpFunction *cmp);
 
 /* used to benchmark memory usage */
-void VoidSort(ElementType A[], int N, CmpFunction *cmp);
+void VoidSort(ElementType A[], SSize_t N, CmpFunction *cmp);
 
 /* Quick Select — places the kth smallest element at position k-1 */
-void Qselect(ElementType A[], int k, int Left, int Right, CmpFunction *cmp);
+void Qselect(ElementType A[], SSize_t k, SSize_t Left, SSize_t Right, CmpFunction *cmp);
 
 #endif
