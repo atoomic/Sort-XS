@@ -2,7 +2,7 @@ package Sort::XS;
 use strict;
 use warnings;
 use base Exporter::;
-our @EXPORT = qw(xsort ixsort sxsort qselect);
+our @EXPORT = qw(xsort ixsort sxsort fxsort qselect);
 
 our $VERSION = '0.30'; # VERSION
 require XSLoader;
@@ -27,6 +27,14 @@ my $_mapping = {
     insertion_str => \&Sort::XS::insertion_sort_str,
     shell_str     => \&Sort::XS::shell_sort_str,
     perl_str      => \&_perl_sort_str,
+
+    # float sorting
+    quick_float     => \&Sort::XS::quick_sort_float,
+    heap_float      => \&Sort::XS::heap_sort_float,
+    merge_float     => \&Sort::XS::merge_sort_float,
+    insertion_float => \&Sort::XS::insertion_sort_float,
+    shell_float     => \&Sort::XS::shell_sort_float,
+    perl_float      => \&_perl_sort_float,
 };
 
 # API to call XS subs
@@ -68,8 +76,11 @@ sub xsort {
     }
     map { $params{$_} = $args{$_} // $params{$_}; } qw/algorithm type/;
 
-    my $type =
-      ( defined $params{type} && $params{type} eq 'string' ) ? '_str' : '';
+    my $type = '';
+    if ( defined $params{type} ) {
+        if ( $params{type} eq 'string' ) { $type = '_str' }
+        elsif ( $params{type} eq 'float' ) { $type = '_float' }
+    }
     my $sub = $_mapping->{ $params{algorithm} . $type };
     croak( ERR_MSG_UNKNOWN_ALGO, $params{algorithm} ) unless defined $sub;
 
@@ -86,6 +97,11 @@ sub sxsort {
     xsort( @_, type => 'string' );
 }
 
+# shortcut to xsort with floats
+sub fxsort {
+    xsort( @_, type => 'float' );
+}
+
 sub qselect {
     my ($list, %args) = @_;
     croak ERR_MSG_NOLIST unless ref $list eq ref [];
@@ -96,6 +112,9 @@ sub qselect {
 
     if ($type eq 'string') {
         return Sort::XS::quick_select_str($list, $k);
+    }
+    elsif ($type eq 'float') {
+        return Sort::XS::quick_select_float($list, $k);
     }
     return Sort::XS::quick_select($list, $k);
 }
@@ -109,6 +128,12 @@ sub _perl_sort {
 sub _perl_sort_str {
     my $list = shift;
     my @sorted = sort { $a cmp $b } @{$list};
+    return \@sorted;
+}
+
+sub _perl_sort_float {
+    my $list = shift;
+    my @sorted = sort { $a <=> $b } @{$list};
     return \@sorted;
 }
 
@@ -150,6 +175,12 @@ Sort::XS - a ( very ) fast XS sort alternative for one dimension list
         or sxsort( [ $list ], algorithm => 'quick' )
         or sxsort( [ $list ], algorithm => 'heap' )
         or sxsort( [ $list ], algorithm => 'merge' );
+
+    # sorting array of floats/doubles
+    $list = [ 3.14, 1.41, 2.72, 0.58 ];
+    $sorted = fxsort( $list )
+        or xsort( $list, type => 'float' )
+        or xsort( list => $list, algorithm => 'quick', type => 'float' );
     
     # use direct XS subroutines to sort array of strings 
     $sorted = Sort::XS::quick_sort_str( $list )
@@ -266,6 +297,7 @@ You can specify which kind of sort you are expecting ( i.e. '<=>' or 'cmp' ) by 
 
     integer # <=>, is the default operator if not specified
     string  # cmp, do the compare on string
+    float   # <=>, native double comparison (avoids integer truncation)
 
 =back
 
@@ -279,7 +311,14 @@ same usage as xsort
 alias on xsort method but force type to string comparison
 same usage as xsort
 
-=head2  quick_sort   
+=head2 fxsort
+
+alias on xsort method but force type to float/double comparison
+same usage as xsort
+
+    my $sorted = fxsort( [ 3.14, 1.41, 2.72 ] );
+
+=head2  quick_sort
 
 XS subroutine to perform the quicksort algorithm. No type checking performed.
 Accept only one single argument as input.
@@ -347,6 +386,42 @@ XS subroutine to perform shellsort on array of strings.
 XS subroutine to perform insertionsort on array of strings.
 
     Sort::XS::insertion_sort_str( [ 'aa' .. 'zz' ] );
+
+=head2 quick_sort_float
+
+XS subroutine to perform quicksort on array of floats/doubles.
+
+    Sort::XS::quick_sort_float( [ 3.14, 1.41, 2.72 ] );
+
+=head2 heap_sort_float
+
+XS subroutine to perform heapsort on array of floats/doubles.
+
+    Sort::XS::heap_sort_float( [ 3.14, 1.41, 2.72 ] );
+
+=head2 merge_sort_float
+
+XS subroutine to perform mergesort on array of floats/doubles.
+
+    Sort::XS::merge_sort_float( [ 3.14, 1.41, 2.72 ] );
+
+=head2 shell_sort_float
+
+XS subroutine to perform shellsort on array of floats/doubles.
+
+    Sort::XS::shell_sort_float( [ 3.14, 1.41, 2.72 ] );
+
+=head2 insertion_sort_float
+
+XS subroutine to perform insertionsort on array of floats/doubles.
+
+    Sort::XS::insertion_sort_float( [ 3.14, 1.41, 2.72 ] );
+
+=head2 quick_select_float
+
+XS subroutine for float QuickSelect. Returns the kth smallest float.
+
+    Sort::XS::quick_select_float([3.14, 1.41, 2.72], 2);  # 2.72
 
 =head2 qselect
 
@@ -526,9 +601,6 @@ You can contribute to this project via GitHub :
     https://github.com/atoomic/Sort-XS
 
 =head1 TODO
-
-Implementation of float comparison...
-At this time only implement sort of integers and strings
 
 Improve API performance for small set of arrays : could use enum and array to speedup API.
 C algorithms can be also tuned.
