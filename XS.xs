@@ -19,7 +19,7 @@ typedef void (*sort_function_t)(ElementType A[ ], int N, CmpFunction *cmp);
 /* The enum and map are in the same order for easy lookup */
 /* Prefixed to avoid conflicts with Windows macros (VOID, INT) from winnt.h */
 typedef enum { SORT_VOID, SORT_INSERTION, SORT_SHELL, SORT_HEAP, SORT_MERGE, SORT_QUICK } SortAlgo;
-typedef enum { SORT_INT, SORT_STR } SortType;
+typedef enum { SORT_INT, SORT_STR, SORT_FLOAT } SortType;
 
 sort_function_t sort_function_map[] = {
 		VoidSort
@@ -33,7 +33,8 @@ sort_function_t sort_function_map[] = {
 
 CmpFunction *cmp_functionmap[] = {
 		compare_int,
-		compare_str
+		compare_str,
+		compare_float
 };
 
 
@@ -76,6 +77,9 @@ SV* _jump_to_sort(const SortAlgo method, const SortType type, SV* array) {
 	if ( type == SORT_INT ) {
 		for ( i = 0; i < count; ++i)
 			elements[i].i = SvIV(svp[i]);
+	} else if ( type == SORT_FLOAT ) {
+		for ( i = 0; i < count; ++i)
+			elements[i].f = SvNV(svp[i]);
 	} else {
 		for ( i = 0; i < count; ++i)
 			elements[i].s = SvPV_nolen(svp[i]);
@@ -91,6 +95,9 @@ SV* _jump_to_sort(const SortAlgo method, const SortType type, SV* array) {
 	if ( type == SORT_INT ) {
 		for ( i = 0; i < count; ++i)
 			av_push(av, newSViv(elements[i].i));
+	} else if ( type == SORT_FLOAT ) {
+		for ( i = 0; i < count; ++i)
+			av_push(av, newSVnv(elements[i].f));
 	} else {
 		for ( i = 0; i < count; ++i)
 			av_push(av, newSVpv(elements[i].s, 0));
@@ -181,6 +188,41 @@ SV* quick_sort_str(array)
 	OUTPUT:
 		RETVAL
 
+SV* insertion_sort_float(array)
+	SV* array
+	CODE:
+		RETVAL = _jump_to_sort(SORT_INSERTION, SORT_FLOAT, array);
+	OUTPUT:
+		RETVAL
+
+SV* shell_sort_float(array)
+	SV* array
+	CODE:
+		RETVAL = _jump_to_sort(SORT_SHELL, SORT_FLOAT, array);
+	OUTPUT:
+		RETVAL
+
+SV* heap_sort_float(array)
+	SV* array
+	CODE:
+		RETVAL = _jump_to_sort(SORT_HEAP, SORT_FLOAT, array);
+	OUTPUT:
+		RETVAL
+
+SV* merge_sort_float(array)
+	SV* array
+	CODE:
+		RETVAL = _jump_to_sort(SORT_MERGE, SORT_FLOAT, array);
+	OUTPUT:
+		RETVAL
+
+SV* quick_sort_float(array)
+	SV* array
+	CODE:
+		RETVAL = _jump_to_sort(SORT_QUICK, SORT_FLOAT, array);
+	OUTPUT:
+		RETVAL
+
 SV* void_sort(array)
 	SV* array
 	CODE:
@@ -218,6 +260,41 @@ SV* quick_select(array, k)
 		Qselect(elements, k, 0, count - 1, compare_int);
 
 		RETVAL = newSViv(elements[k - 1].i);
+		Safefree(elements);
+	}
+	OUTPUT:
+		RETVAL
+
+SV* quick_select_float(array, k)
+	SV* array
+	int k
+	CODE:
+	{
+		AV* input;
+		SV** svp;
+		ElementType *elements;
+
+		if (!array || !SvOK(array) || !SvROK(array))
+			croak("quick_select_float: expecting a reference to an array");
+		input = (AV*) SvRV(array);
+		if (SvTYPE(input) != SVt_PVAV)
+			croak("quick_select_float: expecting a reference to an array");
+
+		int size = av_len(input);
+		int count = size + 1;
+
+		if (k < 1 || k > count)
+			croak("quick_select_float: k=%d out of range [1..%d]", k, count);
+
+		Newx(elements, count, ElementType);
+		svp = AvARRAY(input);
+		int i;
+		for (i = 0; i < count; ++i)
+			elements[i].f = SvNV(svp[i]);
+
+		Qselect(elements, k, 0, count - 1, compare_float);
+
+		RETVAL = newSVnv(elements[k - 1].f);
 		Safefree(elements);
 	}
 	OUTPUT:
