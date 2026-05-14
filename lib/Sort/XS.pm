@@ -8,6 +8,7 @@ our $VERSION = '0.30'; # VERSION
 require XSLoader;
 XSLoader::load( 'Sort::XS', $VERSION );
 use Carp qw/croak/;
+use Scalar::Util qw/reftype/;
 
 use constant ERR_MSG_NOLIST           => 'Need to provide a list';
 use constant ERR_MSG_UNKNOWN_ALGO     => 'Unknown algorithm : ';
@@ -37,7 +38,7 @@ sub xsort {
     # ( we could avoid it... but we want to provide an api as fast as possible )
     my $argc = scalar @_;
     if ( $argc == 1 ) {
-        croak ERR_MSG_NOLIST unless ref $_[0] eq ref [];
+        croak ERR_MSG_NOLIST unless (reftype($_[0]) // '') eq 'ARRAY';
         return Sort::XS::quick_sort( $_[0] );
     }
 
@@ -50,13 +51,13 @@ sub xsort {
 
     croak ERR_MSG_NOLIST unless $params{list};
     my %args;
-    unless ( ref $params{list} eq ref [] ) {
+    unless ( (reftype($params{list}) // '') eq 'ARRAY' ) {
 
         # hash input
         croak ERR_MSG_NUMBER_ARGUMENTS if $argc % 2;
         (%args) = @_;
         croak ERR_MSG_NOLIST
-          unless defined $args{list} && ref $args{list} eq ref [];
+          unless defined $args{list} && (reftype($args{list}) // '') eq 'ARRAY';
         $params{list} = $args{list};
     }
     else {
@@ -88,7 +89,7 @@ sub sxsort {
 
 sub qselect {
     my ($list, %args) = @_;
-    croak ERR_MSG_NOLIST unless ref $list eq ref [];
+    croak ERR_MSG_NOLIST unless (reftype($list) // '') eq 'ARRAY';
     croak 'qselect: k parameter is required' unless defined $args{k};
 
     my $k = $args{k};
