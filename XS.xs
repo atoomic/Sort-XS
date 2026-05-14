@@ -43,6 +43,7 @@ SV* _jump_to_sort(const SortAlgo method, const SortType type, SV* array) {
 	SV* reply;
 	SV** svp;
 	ElementType *elements;
+	int size, count, i;
 
 	/* not defined or not a reference — return empty array */
 	if (!array || !SvOK(array) || !SvROK(array) ) {
@@ -55,8 +56,8 @@ SV* _jump_to_sort(const SortAlgo method, const SortType type, SV* array) {
 	if (SvTYPE (input) != SVt_PVAV)
 		croak ("expecting a reference to an array");
 
-	int size = av_len(input);
-	int count = size + 1;
+	size = av_len(input);
+	count = size + 1;
 
 	av = newAV();
 	reply = newRV_noinc((SV *) av);
@@ -71,7 +72,6 @@ SV* _jump_to_sort(const SortAlgo method, const SortType type, SV* array) {
 	   bounds checking and magic handling from av_fetch() */
 	svp = AvARRAY(input);
 
-	int i;
 	/* Hoisted type check: separate loops eliminate per-element branch */
 	if ( type == SORT_INT ) {
 		for ( i = 0; i < count; ++i)
@@ -196,6 +196,7 @@ SV* quick_select(array, k)
 		AV* input;
 		SV** svp;
 		ElementType *elements;
+		int size, count, i;
 
 		if (!array || !SvOK(array) || !SvROK(array))
 			croak("quick_select: expecting a reference to an array");
@@ -203,15 +204,14 @@ SV* quick_select(array, k)
 		if (SvTYPE(input) != SVt_PVAV)
 			croak("quick_select: expecting a reference to an array");
 
-		int size = av_len(input);
-		int count = size + 1;
+		size = av_len(input);
+		count = size + 1;
 
 		if (k < 1 || k > count)
 			croak("quick_select: k=%d out of range [1..%d]", k, count);
 
 		Newx(elements, count, ElementType);
 		svp = AvARRAY(input);
-		int i;
 		for (i = 0; i < count; ++i)
 			elements[i].i = SvIV(svp[i]);
 
@@ -231,6 +231,7 @@ SV* quick_select_str(array, k)
 		AV* input;
 		SV** svp;
 		ElementType *elements;
+		int size, count, i;
 
 		if (!array || !SvOK(array) || !SvROK(array))
 			croak("quick_select_str: expecting a reference to an array");
@@ -238,15 +239,14 @@ SV* quick_select_str(array, k)
 		if (SvTYPE(input) != SVt_PVAV)
 			croak("quick_select_str: expecting a reference to an array");
 
-		int size = av_len(input);
-		int count = size + 1;
+		size = av_len(input);
+		count = size + 1;
 
 		if (k < 1 || k > count)
 			croak("quick_select_str: k=%d out of range [1..%d]", k, count);
 
 		Newx(elements, count, ElementType);
 		svp = AvARRAY(input);
-		int i;
 		for (i = 0; i < count; ++i)
 			elements[i].s = SvPV_nolen(svp[i]);
 
