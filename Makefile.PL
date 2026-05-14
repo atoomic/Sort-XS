@@ -10,6 +10,7 @@ my %CFG = (
     'PREREQ_PM' => {
         'Test::More' => 0,    # For testing
         'Carp' => 0,
+        'Scalar::Util' => 0,
         'XSLoader' => 0,
         'Exporter' => 0,
     },
@@ -21,6 +22,7 @@ my %CFG = (
         build_requires => {
             'Test::More' => 0,    # For testing
             'Carp' => 0,
+            'Scalar::Util' => 0,
             'XSLoader' => 0,
             'Exporter' => 0,
 
