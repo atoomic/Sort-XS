@@ -36,8 +36,13 @@ CmpFunction *cmp_functionmap[] = {
 		compare_str
 };
 
+CmpFunction *cmp_functionmap_desc[] = {
+		compare_int_desc,
+		compare_str_desc
+};
 
-SV* _jump_to_sort(const SortAlgo method, const SortType type, SV* array) {
+
+SV* _jump_to_sort(const SortAlgo method, const SortType type, int reverse, SV* array) {
 	AV* av;
 	AV* input;
 	SV* reply;
@@ -81,8 +86,9 @@ SV* _jump_to_sort(const SortAlgo method, const SortType type, SV* array) {
 			elements[i].s = SvPV_nolen(svp[i]);
 	}
 
-	/* map to the c method */
-	sort_function_map[method]( elements, count, cmp_functionmap[type]);
+	/* map to the c method — use descending comparators when reverse flag is set */
+	CmpFunction *cmp = reverse ? cmp_functionmap_desc[type] : cmp_functionmap[type];
+	sort_function_map[method]( elements, count, cmp);
 
 	/* pre-extend the output AV to avoid incremental reallocation */
 	av_extend(av, size);
@@ -114,77 +120,91 @@ PROTOTYPES: ENABLE
 SV* insertion_sort(array)
 		SV* array
 		CODE:
-			RETVAL = _jump_to_sort(SORT_INSERTION, SORT_INT, array);
+			RETVAL = _jump_to_sort(SORT_INSERTION, SORT_INT, 0, array);
 		OUTPUT:
 			RETVAL
 
 SV* insertion_sort_str(array)
 		SV* array
 		CODE:
-			RETVAL = _jump_to_sort(SORT_INSERTION, SORT_STR, array);
+			RETVAL = _jump_to_sort(SORT_INSERTION, SORT_STR, 0, array);
 		OUTPUT:
 			RETVAL
-			
+
 SV* shell_sort(array)
 	SV* array
 	CODE:
-		RETVAL = _jump_to_sort(SORT_SHELL, SORT_INT, array);
+		RETVAL = _jump_to_sort(SORT_SHELL, SORT_INT, 0, array);
 	OUTPUT:
 		RETVAL
 
 SV* shell_sort_str(array)
 	SV* array
 	CODE:
-		RETVAL = _jump_to_sort(SORT_SHELL, SORT_STR, array);
+		RETVAL = _jump_to_sort(SORT_SHELL, SORT_STR, 0, array);
 	OUTPUT:
 		RETVAL
 
 SV* heap_sort(array)
 	SV* array
 	CODE:
-		RETVAL = _jump_to_sort(SORT_HEAP, SORT_INT, array);
+		RETVAL = _jump_to_sort(SORT_HEAP, SORT_INT, 0, array);
 	OUTPUT:
 		RETVAL
 
 SV* heap_sort_str(array)
 	SV* array
 	CODE:
-		RETVAL = _jump_to_sort(SORT_HEAP, SORT_STR, array);
+		RETVAL = _jump_to_sort(SORT_HEAP, SORT_STR, 0, array);
 	OUTPUT:
 		RETVAL
 
 SV* merge_sort(array)
 	SV* array
 	CODE:
-		RETVAL = _jump_to_sort(SORT_MERGE, SORT_INT, array);
+		RETVAL = _jump_to_sort(SORT_MERGE, SORT_INT, 0, array);
 	OUTPUT:
 		RETVAL
 
 SV* merge_sort_str(array)
 	SV* array
 	CODE:
-		RETVAL = _jump_to_sort(SORT_MERGE, SORT_STR, array);
+		RETVAL = _jump_to_sort(SORT_MERGE, SORT_STR, 0, array);
 	OUTPUT:
 		RETVAL
 
 SV* quick_sort(array)
 	SV* array
 	CODE:
-		RETVAL = _jump_to_sort(SORT_QUICK, SORT_INT, array);
+		RETVAL = _jump_to_sort(SORT_QUICK, SORT_INT, 0, array);
 	OUTPUT:
 		RETVAL
 
 SV* quick_sort_str(array)
 	SV* array
 	CODE:
-		RETVAL = _jump_to_sort(SORT_QUICK, SORT_STR, array);
+		RETVAL = _jump_to_sort(SORT_QUICK, SORT_STR, 0, array);
 	OUTPUT:
 		RETVAL
 
 SV* void_sort(array)
 	SV* array
 	CODE:
-		RETVAL = _jump_to_sort(SORT_VOID, SORT_INT, array);
+		RETVAL = _jump_to_sort(SORT_VOID, SORT_INT, 0, array);
+	OUTPUT:
+		RETVAL
+
+SV* _sort_with_options(array, method, type, reverse)
+	SV* array
+	int method
+	int type
+	int reverse
+	CODE:
+		if (method < SORT_VOID || method > SORT_QUICK)
+			croak("_sort_with_options: invalid method %d", method);
+		if (type < SORT_INT || type > SORT_STR)
+			croak("_sort_with_options: invalid type %d", type);
+		RETVAL = _jump_to_sort((SortAlgo)method, (SortType)type, reverse, array);
 	OUTPUT:
 		RETVAL
 
