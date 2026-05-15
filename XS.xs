@@ -55,6 +55,12 @@ SV* _jump_to_sort(const SortAlgo method, const SortType type, SV* array) {
 	if (SvTYPE (input) != SVt_PVAV)
 		croak ("expecting a reference to an array");
 
+	/* Reject tied/magical arrays — AvARRAY() bypasses magic, so tied
+	   FETCH is never called.  av_len() does respect magic, leading to a
+	   size/buffer mismatch that causes a buffer overread or segfault. */
+	if (SvMAGICAL((SV*)input) && mg_find((SV*)input, PERL_MAGIC_tied))
+		croak ("Sort::XS does not support tied arrays; copy to a plain array first");
+
 	int size = av_len(input);
 	int count = size + 1;
 
@@ -202,6 +208,8 @@ SV* quick_select(array, k)
 		input = (AV*) SvRV(array);
 		if (SvTYPE(input) != SVt_PVAV)
 			croak("quick_select: expecting a reference to an array");
+		if (SvMAGICAL((SV*)input) && mg_find((SV*)input, PERL_MAGIC_tied))
+			croak("quick_select: Sort::XS does not support tied arrays; copy to a plain array first");
 
 		int size = av_len(input);
 		int count = size + 1;
@@ -237,6 +245,8 @@ SV* quick_select_str(array, k)
 		input = (AV*) SvRV(array);
 		if (SvTYPE(input) != SVt_PVAV)
 			croak("quick_select_str: expecting a reference to an array");
+		if (SvMAGICAL((SV*)input) && mg_find((SV*)input, PERL_MAGIC_tied))
+			croak("quick_select_str: Sort::XS does not support tied arrays; copy to a plain array first");
 
 		int size = av_len(input);
 		int count = size + 1;
