@@ -23,6 +23,8 @@ typedef int (CmpFunction)(const ElementType *a, const ElementType *b);
 
 int compare_int(const ElementType *a, const ElementType *b);
 int compare_str(const ElementType *a, const ElementType *b);
+int compare_int_desc(const ElementType *a, const ElementType *b);
+int compare_str_desc(const ElementType *a, const ElementType *b);
 
 void InsertionSort(ElementType A[], int N, CmpFunction *cmp);
 void ShellSort(ElementType A[], int N, CmpFunction *cmp);

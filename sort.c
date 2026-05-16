@@ -15,6 +15,14 @@ SORT_INLINE int compare_str(const ElementType *a, const ElementType *b) {
 	return strcmp(a->s, b->s);
 }
 
+SORT_INLINE int compare_int_desc(const ElementType *a, const ElementType *b) {
+        return (b->i > a->i) - (b->i < a->i);
+}
+
+SORT_INLINE int compare_str_desc(const ElementType *a, const ElementType *b) {
+	return strcmp(b->s, a->s);
+}
+
 /*
   A > B
   cmp(A, B) > 0

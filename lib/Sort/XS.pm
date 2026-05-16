@@ -29,6 +29,15 @@ my $_mapping = {
     perl_str      => \&_perl_sort_str,
 };
 
+# Map algorithm names to SortAlgo enum values (must match XS.xs enum order)
+my %_algo_to_enum = (
+    quick     => 5,  # SORT_QUICK
+    heap      => 3,  # SORT_HEAP
+    merge     => 4,  # SORT_MERGE
+    insertion => 1,  # SORT_INSERTION
+    shell     => 2,  # SORT_SHELL
+);
+
 # API to call XS subs
 
 sub xsort {
@@ -66,7 +75,23 @@ sub xsort {
         my $void;
         ( $void, %args ) = @_;
     }
-    map { $params{$_} = $args{$_} // $params{$_}; } qw/algorithm type/;
+    map { $params{$_} = $args{$_} // $params{$_}; } qw/algorithm type order/;
+
+    my $reverse = ( defined $params{order} && $params{order} eq 'desc' ) ? 1 : 0;
+
+    if ( $reverse ) {
+        if ( $params{algorithm} eq 'perl' ) {
+            my $type = ( defined $params{type} && $params{type} eq 'string' )
+                       ? '_str' : '';
+            my $sub = $type eq '_str' ? \&_perl_sort_str_desc : \&_perl_sort_desc;
+            return $sub->( $params{list} );
+        }
+        # Use the generic XS entry point with reverse comparators
+        my $algo_enum = $_algo_to_enum{ $params{algorithm} };
+        croak( ERR_MSG_UNKNOWN_ALGO, $params{algorithm} ) unless defined $algo_enum;
+        my $type_enum = ( defined $params{type} && $params{type} eq 'string' ) ? 1 : 0;
+        return Sort::XS::_sort_with_options( $params{list}, $algo_enum, $type_enum, 1 );
+    }
 
     my $type =
       ( defined $params{type} && $params{type} eq 'string' ) ? '_str' : '';
@@ -112,6 +137,18 @@ sub _perl_sort_str {
     return \@sorted;
 }
 
+sub _perl_sort_desc {
+    my $list = shift;
+    my @sorted = sort { $b <=> $a } @{$list};
+    return \@sorted;
+}
+
+sub _perl_sort_str_desc {
+    my $list = shift;
+    my @sorted = sort { $b cmp $a } @{$list};
+    return \@sorted;
+}
+
 1;
 
 __END__
@@ -151,13 +188,18 @@ Sort::XS - a ( very ) fast XS sort alternative for one dimension list
         or sxsort( [ $list ], algorithm => 'heap' )
         or sxsort( [ $list ], algorithm => 'merge' );
     
-    # use direct XS subroutines to sort array of strings 
+    # use direct XS subroutines to sort array of strings
     $sorted = Sort::XS::quick_sort_str( $list )
         or Sort::XS::heap_sort_str($list)
         or Sort::XS::merge_sort_str($list)
         or Sort::XS::insertion_sort_str($list);
-            
-    
+
+    # descending sort (largest/last first)
+    $sorted = xsort( [5, 3, 1, 4, 2], order => 'desc' );   # [5, 4, 3, 2, 1]
+    $sorted = sxsort( ['cherry', 'apple', 'banana'], order => 'desc' );
+    $sorted = xsort( $list, algorithm => 'heap', order => 'desc' );
+
+
 =head1 DESCRIPTION
 
 This module provides several common sort algorithms implemented as XS.
@@ -266,6 +308,15 @@ You can specify which kind of sort you are expecting ( i.e. '<=>' or 'cmp' ) by 
 
     integer # <=>, is the default operator if not specified
     string  # cmp, do the compare on string
+
+=item order [ optional, default = asc ]
+
+Sort direction. Set to C<'desc'> for descending (largest first) order.
+
+    xsort( $list, order => 'desc' )
+    xsort( $list, algorithm => 'heap', order => 'desc' )
+    xsort( $list, type => 'string', order => 'desc' )
+    sxsort( $list, order => 'desc' )
 
 =back
 
