@@ -81,6 +81,27 @@ jobs:
       - name: make test
         run: make test
 
+  sanitizers:
+    name: Sanitizers (ASan + UBSan)
+    runs-on: ubuntu-latest
+
+    container:
+      image: perldocker/perl-tester:5.38
+
+    steps:
+      - uses: actions/checkout@v6
+      - name: perl -V
+        run: perl -V
+      - name: Build with AddressSanitizer and UndefinedBehaviorSanitizer
+        run: |
+          perl Makefile.PL
+          make CC="gcc -fsanitize=address,undefined" OPTIMIZE="-g -O1 -fno-omit-frame-pointer"
+      - name: Run tests under sanitizers
+        run: |
+          ASAN_OPTIONS="detect_leaks=0" \
+          LD_PRELOAD=$(gcc -print-file-name=libasan.so) \
+          make test
+
   windows:
     name: Windows
     runs-on: windows-latest
