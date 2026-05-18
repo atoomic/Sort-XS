@@ -39,10 +39,14 @@ foreach my $type ( keys %$tests ) {
             # check ixsort usage
             is_deeply( ixsort( list => $set ),
                 \@sorted, "ixsort $type using a hash argument" );
+            is_deeply( ixsort( list => $set, type => 'string' ),
+                \@sorted, "ixsort type is not overwritten" );
 
             map {
                 is_deeply( ixsort( $set, algorithm => $_ ),
-                    \@sorted, "ixsort $type use algorithm $_" )
+                    \@sorted, "ixsort $type use algorithm $_" );
+                is_deeply( ixsort( $set, algorithm => $_, type => 'string' ),
+                    \@sorted, "ixsort data type is not overwritten" );
             } @algos;
 
         }

@@ -78,7 +78,7 @@ sub xsort {
 
 # shortcut to xsort with integers
 sub ixsort {
-    xsort(@_);
+    xsort(@_, type => 'integer');
 }
 
 # shortcut to xsort with strings
