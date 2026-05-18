@@ -82,5 +82,38 @@ foreach my $params (@bad_usage) {
     like( $@, '/\w+/', "can detect an error" );
 }
 
+# unknown type parameter should croak, not silently fall back to integer
+{
+    eval { xsort( [1, 2, 3], type => 'bogus' ) };
+    like( $@, qr/Unknown type/, "xsort rejects unknown type parameter" );
+
+    eval { xsort( list => [1, 2, 3], type => 'foobar' ) };
+    like( $@, qr/Unknown type/, "xsort rejects unknown type (hash form)" );
+
+    # valid types should still work
+    is_deeply(
+        xsort( [3, 1, 2], type => 'integer' ),
+        [1, 2, 3],
+        "xsort accepts type => 'integer'"
+    );
+    is_deeply(
+        xsort( ['c', 'a', 'b'], type => 'string' ),
+        ['a', 'b', 'c'],
+        "xsort accepts type => 'string'"
+    );
+}
+
+# qselect type validation
+{
+    eval { qselect( [3, 1, 2], k => 1, type => 'bogus' ) };
+    like( $@, qr/Unknown type/, "qselect rejects unknown type parameter" );
+
+    # valid types work
+    is( qselect( [3, 1, 2], k => 1, type => 'integer' ), 1,
+        "qselect accepts type => 'integer'" );
+    is( qselect( ['c', 'a', 'b'], k => 1, type => 'string' ), 'a',
+        "qselect accepts type => 'string'" );
+}
+
 done_testing;
 

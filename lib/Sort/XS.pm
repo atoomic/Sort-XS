@@ -11,6 +11,7 @@ use Carp qw/croak/;
 
 use constant ERR_MSG_NOLIST           => 'Need to provide a list';
 use constant ERR_MSG_UNKNOWN_ALGO     => 'Unknown algorithm : ';
+use constant ERR_MSG_UNKNOWN_TYPE     => 'Unknown type : ';
 use constant ERR_MSG_NUMBER_ARGUMENTS => 'Bad number of arguments';
 my $_mapping = {
     quick     => \&Sort::XS::quick_sort,
@@ -68,6 +69,10 @@ sub xsort {
     }
     map { $params{$_} = $args{$_} // $params{$_}; } qw/algorithm type/;
 
+    if ( defined $params{type} && $params{type} ne 'integer' && $params{type} ne 'string' ) {
+        croak( ERR_MSG_UNKNOWN_TYPE . $params{type} );
+    }
+
     my $type =
       ( defined $params{type} && $params{type} eq 'string' ) ? '_str' : '';
     my $sub = $_mapping->{ $params{algorithm} . $type };
@@ -92,7 +97,11 @@ sub qselect {
     croak 'qselect: k parameter is required' unless defined $args{k};
 
     my $k = $args{k};
-    my $type = $args{type} || 'integer';
+    my $type = $args{type} // 'integer';
+
+    if ( $type ne 'integer' && $type ne 'string' ) {
+        croak( ERR_MSG_UNKNOWN_TYPE . $type );
+    }
 
     if ($type eq 'string') {
         return Sort::XS::quick_select_str($list, $k);
